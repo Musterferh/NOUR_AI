@@ -1,143 +1,136 @@
-import { NextRequest } from 'next/server';
-import { callKimiStream, Message } from '@/lib/kimi';
-import { getRelevantContext } from '@/lib/pdf-pipeline';
+import { z } from 'zod';
+import { requireOwner } from '@/lib/auth';
+import { apiError, HttpError, readJson } from '@/lib/http';
+import { acquireLease, enforceQuota } from '@/lib/security';
+import { callKimiStream, type Message } from '@/lib/kimi';
+import { retrieveContext, retrieveContextForTopics } from '@/lib/pdf-pipeline';
 import { prisma } from '@/lib/prisma';
+import { MAX_HISTORY_MESSAGES, MAX_MESSAGE_LENGTH } from '@/lib/config';
+import { boundHistory, buildCoachMessages, wantsPersonalRevision } from '@/lib/coaching';
+import { buildProgress } from '@/lib/exams';
+import { modelDeltas } from '@/lib/model-stream';
+import type { SourceReference } from '@/types';
 
-// Define the NOUR Persona System Prompt
-const SYSTEM_PROMPT_TEMPLATE = `You are NOUR, an elite AI System Engineer & Senior Exam Coach specifically designed to help candidates achieve the 90%+ standard on the NCC Level 10 Promotion Examination.
+export const runtime = 'nodejs';
+export const maxDuration = 180;
+const inputSchema = z.object({ message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH), sessionId: z.string().min(1).max(100), turnId: z.string().uuid() }).strict();
+const encoder = new TextEncoder();
+function event(data: unknown) { return encoder.encode(`data: ${JSON.stringify(data)}\n\n`); }
+const headers = { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' };
 
-**IDENTITY & RULES:**
-1. **Primary Knowledge Anchor:** "Arfat's NCC Promotion Exam Master Offline Knowledge Bank" (frozen baseline: 17 August 2026).
-2. **Standing Currency Rule:** You must state exactly once per session (if relevant facts are discussed) that "dynamic facts such as leadership positions and live statistics require a 48-hour pre-exam refresh."
-3. **Strict Status Tagging:** EVERY regulatory claim or fact you state MUST carry an explicit status tag from this list: [CURRENT], [HISTORICAL], [ACHIEVEMENT], [INITIATIVE], [CONSULTATION], or [VERIFY].
-   - Never upgrade a consultation (e.g., TIRMS Feb 2026) to a regulation.
-   - Never cite 2013 or 2024 QoS Business Rules as latest when 2026 Business Rules apply.
-4. **Bilingual Integration:** Professional English is your primary language. However, naturally weave in Hausa phrases for analogies, technical clarification, and encouragement (e.g., "Sannu", "Ka gane?", "Bari in fayyace maka da kyau...").
-5. **Answer Ladder:** Always structure complex explanations using the following exact sequence:
-   Definition → Legal Basis → Purpose → Process → Institutional Roles → Result → Current Status.
-6. **Strict Context Adherence (RAG Enforcement):** You MUST ONLY use the provided CONTEXT FROM MASTER BANK to answer questions. If the user asks a question that cannot be answered using the provided context, you MUST explicitly refuse by saying: "This is outside the scope of the NCC Promotion Exam Master Offline Knowledge Bank." Do NOT use outside knowledge.
-
-**QUIZ & DRILL MECHANICS (CRITICAL):**
-If the user says "Quiz me", "Test me", or if Active Mode is "Mode 2 (Drill/Quiz)":
-- You must initiate a 3-question Multiple Choice Quiz based on the provided context.
-- **Ask ONE question at a time.**
-- Format: Question text, Options A, B, C, D, and explicitly say: "Reply with your chosen letter (A, B, C, or D)."
-- **Immediate Verification:** When the user replies with a letter, you must evaluate it:
-  1. State verdict clearly (Correct / Incorrect).
-  2. Explain WHY the correct option is right and others are traps.
-  3. Provide a Hausa analogy/breakdown for memory reinforcement.
-  4. Cite the exact document section anchor (e.g., "[Deep Chapter 11, Section 11.1]").
-  5. Give the exact Status Tag (e.g., "[CURRENT]" or "[HISTORICAL]").
-  6. Then, ask the next question (until 3 are asked).
-- **Error Log Tracker:** After the 3rd question is graded, if the user got any questions wrong, you MUST generate a summary table:
-  | # | Topic | Question | Your Answer | Correct Answer | Root Cause / Exam Trap |
-  Below the table, provide an exact remediation step to help them target the 90%+ standard.
-
-**CONTEXT FROM MASTER BANK:**
-{CONTEXT_PLACEHOLDER}
-
-**CURRENT SETTINGS:**
-Active Category: {ACTIVE_CATEGORY}
-Active Mode: {ACTIVE_MODE}
-
-When the user asks a question, strictly adhere to your persona, the status tags, and the answer ladder format. Address them professionally, but use Hausa terms to build rapport and understanding.`;
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
+  let release: (() => Promise<void>) | undefined;
+  let assistantId: string | undefined;
   try {
-    const body = await req.json();
-    const { message, history = [], activeCategory = "NCA 2003", activeMode = "Mode 1 (Teach)", sessionId } = body;
-
-    if (!message) {
-      return new Response(JSON.stringify({ error: "Message is required" }), { status: 400 });
+    const ownerId = await requireOwner(req);
+    const { message, sessionId, turnId } = await readJson(req, inputSchema, 40_000);
+    const session = await prisma.session.findFirst({ where: { id: sessionId, ownerId } });
+    if (!session) throw new HttpError(404, 'Session not found.');
+    release = await acquireLease(`chat:${sessionId}`, 175_000);
+    const previous = await prisma.message.findMany({ where: { sessionId, turnId } });
+    const user = previous.find(item => item.role === 'user');
+    const assistant = previous.find(item => item.role === 'assistant');
+    if (user && user.content !== message) throw new HttpError(409, 'This turn ID was already used for another message.');
+    if (assistant?.status === 'complete') {
+      await release(); release = undefined;
+      const replay = new ReadableStream<Uint8Array>({ start(controller) {
+        controller.enqueue(event({ type: 'sources', sources: JSON.parse(assistant.sources) }));
+        controller.enqueue(event({ choices: [{ delta: { content: assistant.content } }] }));
+        controller.enqueue(event({ type: 'done', messageId: assistant.id }));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      } });
+      return new Response(replay, { headers });
     }
-
-    if (sessionId) {
-      // Save User Message to DB
-      await prisma.message.create({
-        data: {
-          sessionId,
-          role: 'user',
-          content: message,
+    await enforceQuota(ownerId, 'chat');
+    // Legacy messages have null turn IDs; SQL NOT excludes nulls unless they are included explicitly.
+    const rows = await prisma.message.findMany({ where: { sessionId, status: 'complete', OR: [{ turnId: null }, { turnId: { not: turnId } }] }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: MAX_HISTORY_MESSAGES });
+    rows.reverse();
+    const history = boundHistory(rows.filter(item => item.role === 'user' || item.role === 'assistant').map(item => ({ role: item.role as Message['role'], content: item.content })));
+    const lastAssistant = rows.findLast(item => item.role === 'assistant');
+    const retainedSources: SourceReference[] = lastAssistant ? JSON.parse(lastAssistant.sources) : [];
+    const attempts = await prisma.examAttempt.findMany({ where: { ownerId, submittedAt: { not: null } }, orderBy: { startedAt: 'desc' }, take: 30 });
+    const progress = buildProgress(attempts);
+    const revision = wantsPersonalRevision(message);
+    const retrievalRequest = { query: message, category: session.category, history, sourceIds: retainedSources.map(source => source.id), maxChunks: 6 };
+    const retrieval = revision && progress.recommendedTopics.length
+      ? await retrieveContextForTopics(retrievalRequest, progress.recommendedTopics.slice(0, 3))
+      : await retrieveContext(retrievalRequest);
+    const sources = retrieval.sources;
+    const stored = await prisma.$transaction(async tx => {
+      if (!user) await tx.message.create({ data: { sessionId, turnId, role: 'user', content: message, createdAt: new Date() } });
+      const data = { content: '', status: 'pending', sources: JSON.stringify(sources) };
+      const result = assistant
+        ? await tx.message.update({ where: { id: assistant.id }, data })
+        : await tx.message.create({ data: { ...data, sessionId, turnId, role: 'assistant', createdAt: new Date(Date.now() + 1) } });
+      await tx.session.update({ where: { id: sessionId }, data: { updatedAt: new Date(), ...(session.title === 'New Chat' ? { title: message.slice(0, 70) } : {}) } });
+      return result;
+    });
+    assistantId = stored.id;
+    const messages = buildCoachMessages({ category: session.category, mode: session.mode, context: retrieval.context, sources, history, message, learningRecord: { completedExams: attempts.length, weakTopics: progress.weakTopics.slice(0, 8), recentMistakes: progress.mistakes.slice(0, 5), target: 90 } });
+    const stop = new AbortController();
+    const signal = AbortSignal.any([req.signal, stop.signal, AbortSignal.timeout(150_000)]);
+    const upstream = retrieval.quality === 'matched' ? await callKimiStream(messages, { signal }) : null;
+    let canceled = false;
+    const finishLease = release;
+    release = undefined; // Stream owns cleanup after this point.
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let content = '';
+        let status = 'complete';
+        let errorSent = false;
+        let lastSaved = Date.now();
+        const send = (value: unknown, allowAfterAbort = false) => { if (!canceled && (!signal.aborted || allowAfterAbort)) controller.enqueue(event(value)); };
+        const fail = (message: string) => { errorSent = true; send({ type: 'error', message }, true); };
+        try {
+          send({ type: 'sources', sources });
+          if (!upstream) {
+            content = /^(hi|hello|hey|sannu)[!.\s]*$/i.test(message)
+              ? `Sannu! I can help you learn ${session.category}, practise one question at a time, or review your saved exam mistakes. What would you like to work on?`
+              : 'I could not find enough supporting evidence in the NCC study bank for that question. Please name a specific topic or section, or ask about the question we were practising. I will not guess an answer.';
+            send({ choices: [{ delta: { content } }] });
+          } else {
+            for await (const delta of modelDeltas(upstream)) {
+              if (signal.aborted) throw new HttpError(499, 'The response was stopped.');
+              content += delta;
+              if (content.length > 24_000) { stop.abort(); throw new HttpError(502, 'The response was too long. Please ask a narrower question.'); }
+              send({ choices: [{ delta: { content: delta } }] });
+              if (Date.now() - lastSaved > 1500) {
+                await prisma.message.updateMany({ where: { id: stored.id }, data: { content } });
+                lastSaved = Date.now();
+              }
+            }
+            if (!content.trim()) throw new HttpError(502, 'The coach returned an empty response. Please retry.');
+            const citations = [...content.matchAll(/\[source:([a-zA-Z0-9_-]+)\]/g)].map(match => match[1]);
+            if (!citations.length || citations.some(id => !sources.some(source => source.id === id))) {
+              const note = '\n\n**Source check:** This response did not provide a complete set of valid source references. Review the attached excerpts before relying on its factual claims.';
+              content += note;
+              send({ choices: [{ delta: { content: note } }] });
+            }
+          }
+        } catch (error) {
+          status = signal.aborted || canceled ? 'stopped' : 'failed';
+          fail(error instanceof HttpError ? error.message : 'The response was interrupted. You can retry this turn.');
+        } finally {
+          if (signal.aborted || canceled) status = 'stopped';
+          if (status === 'stopped' && !errorSent) fail('The response was stopped. You can retry this turn.');
+          try {
+            await prisma.message.updateMany({ where: { id: stored.id }, data: { content, status } });
+            await prisma.session.updateMany({ where: { id: sessionId, ownerId }, data: { updatedAt: new Date() } });
+            if (status === 'complete') send({ type: 'done', messageId: stored.id });
+          } catch { status = 'failed'; fail('Your response could not be saved. Please reload before continuing.'); }
+          await finishLease?.().catch(() => console.error('Chat lease cleanup failed.'));
+          if (!canceled) {
+            if (status === 'complete') controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          }
         }
-      });
-    }
-
-    // 1. Retrieve relevant context from the PDF Pipeline
-    const relevantContext = await getRelevantContext(message);
-
-    // 2. Assemble System Prompt with injected context
-    let systemPromptContent = SYSTEM_PROMPT_TEMPLATE.replace(
-      '{CONTEXT_PLACEHOLDER}', 
-      relevantContext || "No highly relevant context found. Rely on your baseline knowledge."
-    );
-    systemPromptContent = systemPromptContent.replace('{ACTIVE_CATEGORY}', activeCategory);
-    systemPromptContent = systemPromptContent.replace('{ACTIVE_MODE}', activeMode);
-
-    // 3. Assemble Messages Array
-    const messages: Message[] = [
-      { role: 'system', content: systemPromptContent },
-      ...history,
-      { role: 'user', content: message }
-    ];
-
-    // 4. Call Moonshot/Kimi API
-    const stream = await callKimiStream(messages);
-
-    // 5. Intercept stream to save AI response to DB
-    const transformStream = new TransformStream({
-      start() {
-        (this as any).fullContent = "";
       },
-      transform(chunk, controller) {
-        controller.enqueue(chunk);
-        
-        const decoder = new TextDecoder();
-        const text = decoder.decode(chunk);
-        
-        const lines = text.split('\n');
-        for (const line of lines) {
-           if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-              try {
-                const data = JSON.parse(line.slice(6));
-                const content = data.choices[0]?.delta?.content || "";
-                (this as any).fullContent += content;
-              } catch(e) {}
-           }
-        }
-      },
-      async flush() {
-         const fullContent = (this as any).fullContent;
-         if (sessionId && fullContent) {
-           await prisma.message.create({
-             data: {
-               sessionId,
-               role: 'assistant',
-               content: fullContent
-             }
-           });
-           
-           await prisma.session.update({
-             where: { id: sessionId },
-             data: { updatedAt: new Date() }
-           });
-         }
-      }
+      cancel() { canceled = true; stop.abort(); },
     });
-
-    // 6. Pipe stream directly to client
-    return new Response(stream.pipeThrough(transformStream), {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
-
-  } catch (error: any) {
-    console.error("Chat API Error:", error);
-    return new Response(JSON.stringify({ error: error.message || "An error occurred during chat processing" }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+    return new Response(stream, { headers });
+  } catch (error) {
+    if (assistantId) await prisma.message.updateMany({ where: { id: assistantId }, data: { status: req.signal.aborted ? 'stopped' : 'failed' } }).catch(() => undefined);
+    return apiError(error);
+  } finally { if (release) await release().catch(() => console.error('Chat lease cleanup failed.')); }
 }

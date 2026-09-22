@@ -3,7 +3,7 @@ import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import { createClient } from '@libsql/client';
 
 function createPrismaClient() {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL || 'file:./dev.db';
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
   // Turso/LibSQL (production on Vercel)
@@ -14,7 +14,7 @@ function createPrismaClient() {
   }
 
   // Local SQLite fallback (development)
-  return new PrismaClient({ log: [] });
+  return new PrismaClient({ log: [], datasources: { db: { url } } });
 }
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };

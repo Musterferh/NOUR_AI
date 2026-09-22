@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -49,3 +50,12 @@ prisma/dev.db
 
 # Keep embeddings.json in git (needed for Vercel RAG)
 !data/embeddings.json
+
+# Local tooling and backups
+.npm-cache/
+/backups/
+/playwright-report/
+/test-results/
+*.db-journal
+*.db-shm
+*.db-wal

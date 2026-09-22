@@ -1,95 +1,61 @@
-﻿import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildKnowledgeBank, parseArguments, sha256 } from './knowledge-ingest.mjs';
 
-const require = createRequire(import.meta.url);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-async function extractPdfText(pdfPath) {
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs').catch(() =>
-    import('pdfjs-dist')
-  );
-  
-  const data = new Uint8Array(fs.readFileSync(pdfPath));
-  const doc = await pdfjsLib.getDocument({ data }).promise;
-  let fullText = '';
-  
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items.map(item => item.str).join(' ');
-    fullText += pageText + '\n\n';
-    if (i % 10 === 0) process.stdout.write('\r  Read ' + i + '/' + doc.numPages + ' pages...');
-  }
-  console.log('\r  Read all ' + doc.numPages + ' pages.          ');
-  return fullText;
-}
-
-async function main() {
-  console.log('Loading embedding model (downloads ~30MB first time)...');
-  const { pipeline } = await import('@xenova/transformers');
-  const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-  console.log('Model ready.');
-
-  async function embed(text) {
-    const output = await extractor(text, { pooling: 'mean', normalize: true });
-    return Array.from(output.data);
-  }
-
-  const pdfPath = path.join(ROOT, 'data', 'Arfats_NCC_Promotion_Exam_MASTER_CONTROLLED_v6_0_Checkpoint_28_REMAINING_CURRENCY_CONTROL.pdf');
-  console.log('Reading PDF: ' + path.basename(pdfPath));
-  const text = await extractPdfText(pdfPath);
-  console.log('PDF text extracted. Length: ' + text.length + ' chars');
-
-  console.log('Chunking text...');
-  const paragraphs = text.split(/\n\s*\n/);
-  let currentChapter = 'Intro';
-  let currentTopic = 'General';
-  const chunks = [];
-  let currentContent = '';
-  let chunkIndex = 0;
-
-  function pushChunk() {
-    if (currentContent.trim().length === 0) return;
-    chunks.push({
-      id: 'chunk-' + chunkIndex++,
-      metadata: { id: 'doc-' + chunkIndex, chapter: currentChapter, topic: currentTopic, statusTag: 'Active' },
-      content: currentContent.trim()
-    });
-    currentContent = '';
-  }
-
-  for (const para of paragraphs) {
-    const chapterMatch = para.match(/chapter\s+(\d+)|checkpoint\s+(\d+)/i);
-    if (chapterMatch) {
-      if (chapterMatch[1]) currentChapter = 'Chapter ' + chapterMatch[1];
-      if (chapterMatch[2]) currentTopic = 'Checkpoint ' + chapterMatch[2];
+async function extractPdfPages(bytes) {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const document = await getDocument({ data: new Uint8Array(bytes), isEvalSupported: false }).promise;
+  try {
+    const pages = [];
+    for (let number = 1; number <= document.numPages; number++) {
+      const page = await document.getPage(number);
+      const content = await page.getTextContent();
+      const text = content.items.filter(item => 'str' in item)
+        .map(item => item.str + (item.hasEOL ? '\n' : ' ')).join('');
+      pages.push({ page: number, text });
+      page.cleanup();
     }
-    const lower = para.toLowerCase();
-    if (lower.includes('spectrum')) currentTopic = 'Spectrum Lifecycle';
-    if (lower.includes('qos') || lower.includes('qoe')) currentTopic = 'QoS vs QoE';
-    if (lower.includes('nin-sim')) currentTopic = 'NIN-SIM 2025';
-    if (lower.includes('tirms')) currentTopic = 'TIRMS Architecture';
-    if (lower.includes('nca 2003')) currentTopic = 'NCA 2003';
-    currentContent += para + '\n\n';
-    if (currentContent.length > 3500) pushChunk();
+    return pages;
+  } finally {
+    await document.destroy();
   }
-  pushChunk();
-
-  console.log('Created ' + chunks.length + ' chunks. Generating embeddings (few minutes)...');
-
-  for (let i = 0; i < chunks.length; i++) {
-    process.stdout.write('\r  Embedding ' + (i + 1) + ' / ' + chunks.length + '...');
-    chunks[i].embedding = await embed(chunks[i].content);
-  }
-
-  const outPath = path.join(ROOT, 'data', 'embeddings.json');
-  fs.writeFileSync(outPath, JSON.stringify(chunks));
-  const sizeKB = Math.round(fs.statSync(outPath).size / 1024);
-  console.log('\nDone! Saved ' + chunks.length + ' chunks (' + sizeKB + ' KB) to data/embeddings.json');
-  console.log('You can now deploy to Vercel!');
 }
 
-main().catch(err => { console.error('\nError:', err); process.exit(1); });
+export async function main(args = process.argv.slice(2)) {
+  const options = parseArguments(args);
+  const inputPath = path.resolve(options.input);
+  const outputPath = path.resolve(options.output ?? path.join(ROOT, 'data', 'knowledge-bank.json'));
+  if (inputPath.toLowerCase() === outputPath.toLowerCase()) throw new Error('Input and output must be different files.');
+  const bytes = await fs.readFile(inputPath);
+  const hash = sha256(bytes);
+  if (options.sha256 && hash !== options.sha256.toLowerCase()) throw new Error('Source SHA-256 does not match the expected artifact. No output was written.');
+  const pages = await extractPdfPages(bytes);
+  const bank = buildKnowledgeBank(pages, {
+    title: options.title ?? path.basename(inputPath, path.extname(inputPath)),
+    fileName: path.basename(inputPath),
+    version: options.version,
+    sha256: hash,
+    status: options.status ?? 'VERIFY',
+    ...(options.baseline ? { baselineDate: options.baseline } : {}),
+  });
+  const temporaryPath = `${outputPath}.${process.pid}.tmp`;
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  try {
+    await fs.writeFile(temporaryPath, JSON.stringify(bank, null, 2), { flag: 'wx' });
+    await fs.rename(temporaryPath, outputPath);
+  } catch (error) {
+    await fs.rm(temporaryPath, { force: true });
+    throw error;
+  }
+  console.log(`Indexed ${bank.chunks.length} chunks from ${pages.length} pages into ${outputPath}`);
+  console.log(`Source SHA-256: ${hash}`);
+  if (bank.manifest.emptyPages.length > 0) console.warn(`Pages without text: ${bank.manifest.emptyPages.join(', ')}. Check these pages for scanned content or diagrams.`);
+  return bank.manifest;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => { console.error(error.message); process.exitCode = 1; });
+}

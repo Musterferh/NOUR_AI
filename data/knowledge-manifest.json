@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "format": "legacy-chunk-array",
+  "file": "embeddings.json",
+  "sha256": "f4d94cbc7a083733b31272573202e9be037f96d9b1637fc6345e7f4da6ef91ca",
+  "chunkCount": 291,
+  "source": {
+    "fileName": null,
+    "version": null,
+    "sha256": null,
+    "baselineDate": null
+  },
+  "provenance": "Original PDF absent from this checkout. Source identity, version, baseline and extraction time have not been independently established. The checksum above identifies only the committed extracted corpus.",
+  "legacyEmbeddingDimensions": 384,
+  "runtimeRetrieval": "BM25; stored embeddings ignored",
+  "legacyMetadataPolicy": "Derive section labels and unambiguous page markers from content. All legacy source status is VERIFY."
+}
