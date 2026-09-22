@@ -1,0 +1,90 @@
+.login-shell {
+  min-height: 100dvh;
+  padding: 48px 28px;
+  display: grid;
+  place-items: center;
+  background: var(--canvas);
+}
+
+.login-frame {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(100%, 1000px);
+  min-height: 640px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 24px 80px #252a270d;
+}
+
+.login-identity {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+  padding: 44px;
+  background: #222e27;
+  color: #f4f0e7;
+}
+
+.login-identity .login-brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: 0;
+}
+
+.login-identity .nour-logo-image { filter: brightness(0) invert(1); }
+.login-edition { color: #c4c7ba; font-size: 9px; line-height: 1.9; letter-spacing: 2px; }
+.login-identity .eyebrow { color: #dbbf8e; font-size: 9px; letter-spacing: 2.2px; margin-bottom: 18px; }
+.login-motto { font-family: var(--font-display, Georgia, serif); font-size: clamp(38px, 4.2vw, 52px); font-weight: 400; line-height: 1.13; letter-spacing: -1.4px; }
+.login-motto em { color: #dbbf8e; font-weight: 400; }
+.login-introduction { max-width: 310px; margin-top: 24px; color: #c4c7ba; font-size: 13px; line-height: 1.9; }
+.login-principles { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; margin: 0; padding: 24px 0 0; border-top: 1px solid #485246; gap: 16px; }
+.login-principles li { font-size: 12px; letter-spacing: .4px; }
+.login-principles span { display: block; margin-bottom: 9px; color: #dbbf8e; font-size: 10px; font-variant-numeric: tabular-nums; }
+
+.login-frame .login-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: none;
+  padding: 50px;
+  background: var(--panel);
+}
+
+.login-frame .login-card > .eyebrow { color: var(--accent); margin-bottom: 20px; font-size: 10px; }
+.login-frame .login-card h1 { font-family: var(--font-display, Georgia, serif); font-size: 40px; line-height: 1.17; font-weight: 400; letter-spacing: -1.2px; }
+.login-frame .login-description { margin: 24px 0 34px; color: var(--muted); font-size: 13px; line-height: 1.85; }
+.login-frame .login-card label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+.login-frame .password-field { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-line); border-radius: 6px; background: var(--canvas); color: var(--muted); padding: 13px; margin-bottom: 20px; }
+.login-frame .password-field input { width: 100%; min-width: 0; border: 0; outline: none; background: none; padding: 3px; }
+.login-frame .password-field:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.login-frame .login-card form > .primary-button { width: 100%; min-height: 48px; justify-content: space-between; padding: 13px 18px; font-size: 13px; }
+.login-frame .login-card form > .small { margin-bottom: 16px; }
+.login-frame .login-footer { display: flex; border-top: 1px solid var(--line); color: var(--muted); margin-top: 32px; padding-top: 22px; gap: 10px; align-items: flex-start; font-size: 11px; line-height: 1.7; }
+.login-frame .login-footer svg { flex-shrink: 0; margin-top: 2px; }
+
+@media (max-width: 900px) and (min-width: 681px) {
+  .login-identity { padding: 32px; }
+  .login-frame .login-card { padding: 32px; }
+  .login-motto { font-size: 40px; }
+  .login-frame .login-card h1 { font-size: 34px; }
+}
+
+@media (max-width: 680px) {
+  .login-shell { padding: 20px 16px; }
+  .login-frame { grid-template-columns: 1fr; min-height: 0; max-width: 460px; border-radius: 10px; }
+  .login-identity { padding: 24px 28px; gap: 0; }
+  .login-identity .nour-logo { max-width: 72px; }
+  .login-edition { font-size: 9px; }
+  .login-statement, .login-principles { display: none; }
+  .login-frame .login-card { padding: 32px 28px; }
+  .login-frame .login-card h1 { font-size: 34px; }
+  .login-frame .login-card > .eyebrow { margin-bottom: 14px; }
+  .login-frame .login-description { margin: 18px 0 26px; }
+  .login-frame .login-footer { margin-top: 26px; }
+}

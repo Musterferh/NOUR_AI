@@ -10,11 +10,14 @@ generator client {
 
 model Session {
   id        String    @id @default(uuid())
+  ownerId   String    @default("private")
   title     String
   category  String
+  mode      String    @default("Mode 1 (Teach)")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
+  @@index([ownerId, updatedAt])
 }
 
 model Message {
@@ -22,6 +25,46 @@ model Message {
   sessionId String
   role      String   // 'user' or 'assistant'
   content   String
+  turnId    String?
+  status    String   @default("complete")
+  sources   String   @default("[]")
   createdAt DateTime @default(now())
   session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@unique([sessionId, turnId, role])
+  @@index([sessionId, createdAt])
+}
+
+model ExamAttempt {
+  id          String   @id @default(uuid())
+  ownerId     String
+  category    String
+  questions   String
+  answers     String   @default("{}")
+  sources     String   @default("[]")
+  revision    Int      @default(0)
+  startedAt   DateTime @default(now())
+  expiresAt   DateTime
+  submittedAt DateTime?
+  score       Float?
+  @@index([ownerId, startedAt])
+}
+
+model UsageBucket {
+  id        String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+model RequestLease {
+  id        String   @id
+  token     String
+  expiresAt DateTime
+}
+
+model AuthSession {
+  id        String   @id
+  ownerId   String
+  expiresAt DateTime
+  @@index([expiresAt])
 }
