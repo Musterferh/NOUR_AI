@@ -4,6 +4,7 @@ export const KNOWLEDGE_STATUSES = [
 ] as const;
 
 export type KnowledgeStatus = typeof KNOWLEDGE_STATUSES[number];
+export type SourceProvenance = 'primary-source-checked' | 'provided-document' | 'unverified';
 
 export interface DocumentMetadata {
   id: string;
@@ -17,6 +18,14 @@ export interface DocumentMetadata {
   sourceHash?: string;
   version?: string;
   baselineDate?: string;
+  sourceUrl?: string;
+  publisher?: string;
+  publishedDate?: string;
+  verifiedAt?: string;
+  provenance?: SourceProvenance;
+  currencyNote?: string;
+  exactExcerpt?: string;
+  excerptHash?: string;
 }
 
 export interface Chunk {
@@ -33,6 +42,13 @@ export interface SourceReference {
   page?: number;
   status: string;
   excerpt: string;
+  url?: string;
+  publisher?: string;
+  publishedDate?: string;
+  verifiedAt?: string;
+  provenance?: SourceProvenance;
+  currencyNote?: string;
+  excerptHash?: string;
 }
 
 export interface RetrievalRequest {

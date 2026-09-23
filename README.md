@@ -24,8 +24,13 @@ npm run dev
 
 Open http://localhost:3000 and unlock it with `APP_ACCESS_PASSWORD` from `.env.local`.
 On Windows PowerShell, use `npm.cmd` if execution policy blocks `npm.ps1`.
+The launch commands load `.env.local` at Node startup. If your network uses a
+certificate installed in the operating system's trust store, use a Node version
+that supports `--use-system-ca` and add `NODE_OPTIONS=--use-system-ca` to your
+local `.env.local`. This keeps HTTPS certificate verification enabled.
 Text chat needs the coaching API key; browsing saved work and local retrieval do not.
-No provider keys are committed. The application never calls paid APIs during tests.
+No provider keys are committed. Automated unit/browser tests never call paid APIs.
+The separately invoked live conversation evaluation does; it requires `--live`.
 
 ## How the coach works
 
@@ -34,25 +39,51 @@ No provider keys are committed. The application never calls paid APIs during tes
   answers instead of searching for the letter alone. It does not compare incompatible vectors.
 - Saved, authorized conversation history supplies continuity. Clients cannot inject system
   messages or another session's history. Recent weak topics and mistakes inform revision.
-- The active coaching specification is `data/coach-policy.md`; the old
+- Difficult scenarios, calculations and analytical questions automatically use Kimi K3's
+  `high` reasoning effort. Ordinary recall uses `low`; saying "think deeply" also selects
+  high. This is a tested routing heuristic, not a guarantee that difficulty is always detected.
+  Streaming completion caps are 8,192 tokens for low and 16,384 for high, including thinking;
+  provider timeouts are 120 and 240 seconds. Automatic routing never chooses `max`.
+- The teaching persona is `data/coach-policy.md`. Runtime evidence rules in
+  `src/lib/coaching.ts` override unsupported factual assertions in that persona; the old
   `NCC_Study_Partner_System_Prompt_v1.md` is a historical design reference, not runtime policy.
-- Answers show source excerpts. Missing evidence produces an explicit limitation rather
-  than a fallback to general knowledge. Conflicts and dynamic claims must be marked for verification.
+- Answers show source excerpts and publication links where checked. Missing NCC evidence
+  requires an explicit limitation; ordinary calculations/general explanations are labeled
+  separately. Conflicts and dynamic claims must be marked for verification.
 - Model citations are checked against retrieved source IDs. This is a structural check;
   it cannot prove that every explanation or generated answer is factually correct.
 - Chat turns have stable IDs, recoverable partial messages, cancellation and idempotent retries.
   Only completed turns are included in subsequent model history. At most 40 recent messages
   and 32,000 history characters are included; this is bounded context, not unlimited memory.
+  Private provider reasoning is neither displayed nor saved as conversation history.
 
 The committed legacy corpus is available for study, but its original PDF is absent. Its old
 chapter labels are unreliable. Runtime labels are conservatively inferred from actual text,
 source IDs remain stable, and legacy material is marked `VERIFY`. No original page numbers
 or independent currency verification are invented. See [knowledge bank workflow](docs/knowledge-bank.md)
 to regenerate from an authorized source PDF with traceable pages, sections and hashes.
+The separate `data/verified-materials.json` supplement contains four passages checked against
+NCC/ITU publications. A checked publication is not certification of current legal applicability
+or of the rest of the study bank. Source cards expose review dates and currency limitations.
+
+Run the reproducible [conversation evaluation](docs/conversation-evaluation.md) to check
+grounded accuracy, difficult reasoning, follow-up understanding and unsupported premises.
+Reports retain the actual answers for human review; a passing regression check is not a
+general intelligence score.
+
+```sh
+npm run eval:conversation
+npm run eval:conversation -- --live
+```
+
+The first command checks fixtures and retrieval without provider calls. The second makes
+up to ten sequential paid requests, with explicit input, completion and elapsed-time caps.
 
 ## Exams and progress
 
-The simulator validates 20 distinct questions with four choices and actual source IDs.
+The simulator validates 5 distinct questions with four choices and actual source IDs.
+Generation uses high reasoning effort with a 24,576-token completion cap and at most one
+schema repair within the overall request deadline.
 It stores the complete attempt on the server and withholds answer keys until submission.
 Answers save with revision checks; a stale save cannot overwrite newer work. The 30-minute
 deadline uses server time and survives reloads. Answers received after expiry do not change

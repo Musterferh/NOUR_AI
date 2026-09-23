@@ -64,7 +64,7 @@ function textPdf(): Buffer {
   return Buffer.from(document);
 }
 
-test('real PDF CLI writes a loadable verified corpus and checksum failure preserves existing output', async () => {
+test('real PDF CLI writes a loadable checksum-validated corpus and checksum failure preserves existing output', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nour-ingest-test-'));
   try {
     const bytes = textPdf();
@@ -77,6 +77,9 @@ test('real PDF CLI writes a loadable verified corpus and checksum failure preser
     assert.equal(index.documents.length, 1);
     assert.equal(index.documents[0].chunk.metadata.page, 1);
     assert.equal(index.documents[0].chunk.metadata.section, 'DEEP CHAPTER 1 - SPECTRUM');
+    assert.equal(index.documents[0].chunk.metadata.provenance, 'provided-document');
+    assert.equal(index.documents[0].chunk.metadata.statusTag, 'VERIFY');
+    assert.equal(index.documents[0].chunk.metadata.verifiedAt, undefined);
     assert.match(index.documents[0].chunk.content, /Spectrum assignment/);
     const before = await fs.readFile(output, 'utf8');
     await assert.rejects(promisify(execFile)(process.execPath, args.map(value => value === sha256(bytes) ? '0'.repeat(64) : value), { timeout: 30_000 }), /does not match/);

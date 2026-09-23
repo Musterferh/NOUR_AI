@@ -1,0 +1,11 @@
+{
+  "mode": "live-http",
+  "startedAt": "2026-09-23T15:52:21.832Z",
+  "model": "kimi-k3",
+  "providerRequestsExpected": 2,
+  "turns": [],
+  "passed": false,
+  "error": "The expression evaluated to a falsy value:\n\n  assert.ok(sourceEvent?.type === 'sources' && sourceEvent.sources.some(source => source.id === 'primary-itu-spectrum-2015' && source.url && source.verifiedAt))\n",
+  "temporarySessionRemoved": true,
+  "completedAt": "2026-09-23T15:52:51.011Z"
+}

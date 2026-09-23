@@ -30,20 +30,26 @@ test('chat route streams grounded history and recovers idempotently from failure
   const cookie = login.headers.get('Set-Cookie')!.split(';')[0];
   const question = 'What are the objectives of NCA 2003?';
   const encoder = new TextEncoder();
-  let mode: 'normal' | 'truncated' | 'waiting' | 'error' = 'normal';
-  const providerCalls: Array<{ messages: Array<{ role: string; content: string }>; signal: AbortSignal }> = [];
+  let mode: 'normal' | 'truncated' | 'waiting' | 'reasoning-only' | 'error' = 'normal';
+  const privateReasoning = 'private-provider-reasoning-never-for-storage';
+  const providerCalls: Array<{ messages: Array<{ role: string; content: string }>; signal: AbortSignal; reasoningEffort: string }> = [];
   t.mock.method(globalThis, 'fetch', async (_url: unknown, init?: RequestInit) => {
     const payload = JSON.parse(String(init?.body));
     const signal = init?.signal as AbortSignal;
-    providerCalls.push({ messages: payload.messages, signal });
+    providerCalls.push({ messages: payload.messages, signal, reasoningEffort: payload.reasoning_effort });
     if (mode === 'error') return new Response('mock upstream failure', { status: 500 });
-    const sourceId = payload.messages[0].content.match(/"id":"(chunk-\d+)"/)?.[1];
+    const sourceId = payload.messages[0].content.match(/"id":"([a-zA-Z0-9_-]+)"/)?.[1];
     assert.ok(sourceId, 'server prompt should contain real retrieved source IDs');
     const answer = `[VERIFY] Sannu — the objectives come from the supplied bank. [source:${sourceId}]`;
     const bytes = encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: answer } }] })}\n\n`);
     const streamMode = mode;
     return new Response(new ReadableStream<Uint8Array>({
       start(controller) {
+        if (streamMode === 'reasoning-only') {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: privateReasoning } }] })}\n\n`));
+          signal.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')), { once: true });
+          return;
+        }
         // Deliberately split inside JSON and across UTF-8 to exercise the real stream parser.
         for (let offset = 0; offset < bytes.length; offset += 7) controller.enqueue(bytes.slice(offset, offset + 7));
         if (streamMode === 'waiting') {
@@ -130,6 +136,14 @@ test('chat route streams grounded history and recovers idempotently from failure
     assert.equal(await prisma.message.count({ where: { sessionId: session.id, turnId } }), 2);
   });
 
+  await t.test('complex questions receive deeper reasoning while ordinary recall stays low', async () => {
+    const session = await createSession();
+    await (await POST(request(session.id, randomUUID()))).text();
+    assert.equal(providerCalls.at(-1)!.reasoningEffort, 'low');
+    await (await POST(request(session.id, randomUUID(), { message: 'Compare the NCA 2003 objectives and NCC functions. Analyse the trade-offs and justify the distinction.' }))).text();
+    assert.equal(providerCalls.at(-1)!.reasoningEffort, 'high');
+  });
+
   await t.test('unexpected stream EOF emits an error and persists partial text as failed', async () => {
     const session = await createSession();
     mode = 'truncated';
@@ -172,6 +186,51 @@ test('chat route streams grounded history and recovers idempotently from failure
     assert.equal(response.status, 200);
     assert.equal((await prisma.message.findUnique({ where: { id: partial.id } }))?.status, 'stopped');
     await prisma.requestLease.deleteMany({ where: { id: `chat:${session.id}` } });
+  });
+
+  await t.test('canceling during reasoning stores no private text and permits retry before any answer token', async () => {
+    const session = await createSession();
+    const turnId = randomUUID();
+    const message = 'A licensee misses its rollout deadline and refuses to pay a fine. Which enforcement option is justified?';
+    const controller = new AbortController();
+    mode = 'reasoning-only';
+    const response = await POST(request(session.id, turnId, { message }, controller.signal));
+    assert.equal(response.status, 200);
+    assert.equal(providerCalls.at(-1)!.reasoningEffort, 'high');
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    const first = await reader.read();
+    assert.equal(first.done, false);
+    let text = decoder.decode(first.value, { stream: true });
+    assert.match(text, /"type":"sources"/);
+    assert.doesNotMatch(text, /"choices"|reasoning_content|private-provider-reasoning/);
+    controller.abort();
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      text += decoder.decode(part.value, { stream: true });
+    }
+    reader.releaseLock();
+    assert.match(text, /"type":"error"/);
+    assert.doesNotMatch(text, /"type":"done"|"choices"|reasoning_content|private-provider-reasoning/);
+    await awaitCleanup(session.id);
+    assert.equal(providerCalls.at(-1)!.signal.aborted, true);
+    const stopped = await prisma.message.findFirst({ where: { sessionId: session.id, turnId, role: 'assistant' } });
+    assert.equal(stopped?.status, 'stopped');
+    assert.equal(stopped?.content, '');
+    assert.ok(stopped?.sources && JSON.parse(stopped.sources).length > 0);
+    const calls = providerCalls.length;
+    mode = 'normal';
+    const retried = await (await POST(request(session.id, turnId, { message }))).text();
+    assert.match(retried, /"type":"done"/);
+    assert.doesNotMatch(retried, /reasoning_content|private-provider-reasoning/);
+    assert.equal(providerCalls.length, calls + 1);
+    const saved = await prisma.message.findMany({ where: { sessionId: session.id, turnId } });
+    assert.equal(saved.length, 2);
+    assert.equal(saved.find(item => item.role === 'assistant')?.status, 'complete');
+    assert.ok(saved.every(item => !item.content.includes(privateReasoning)));
+    assert.ok(providerCalls.at(-1)!.messages.every(item => !item.content.includes(privateReasoning)));
+    assert.equal(await prisma.requestLease.count({ where: { id: `chat:${session.id}` } }), 0);
   });
 
   await t.test('reader cancellation stops upstream work and permits retrying the same turn', async () => {

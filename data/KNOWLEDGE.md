@@ -1,21 +1,37 @@
 # Knowledge bank maintenance
 
-The complete maintenance guide, API contracts, rebuild options, provenance limits, and evaluation procedure are in [docs/knowledge-bank.md](../docs/knowledge-bank.md).
+See [docs/knowledge-bank.md](../docs/knowledge-bank.md) for source provenance, API fields, exact rebuild commands and evaluation procedures.
 
-The application uses BM25 lexical retrieval, with acronym expansion, conversation topic continuity, and source references. It does not compare hash vectors with model embeddings. The existing `embeddings.json` remains supported as a legacy input; its vector fields are ignored.
+The active index has **1,426 chunks**: `knowledge-bank.json` contains the original 291 legacy chunks plus the supplied 860-chunk study guide and 271-chunk employee handbook; `verified-materials.json` adds four small primary-source passages. The component banks are preserved. The loader uses the merged bank when present, otherwise `embeddings.json`, and then appends the separate supplement. It does not load the component banks twice.
 
-The original PDF is not included in this checkout. Its version, checksum, and extraction date cannot be reconstructed from the legacy JSON. The legacy manifest records this gap. Existing labels are recovered conservatively from headings and explicit page markers in the text; mixed-page chunks have no single page citation. Legacy source status is `VERIFY`, not a claim that any individual fact has been independently checked.
+Runtime provenance has three values:
 
-To rebuild, obtain the controlled source PDF from its owner, record its version and independently confirmed checksum, and run:
+- `unverified`: legacy text with unknown original PDF/version. Headings and page markers are recovered conservatively from the text.
+- `provided-document`: extracted PDF material with recorded source hash/version/pages. That records provenance supplied during ingestion, not independent authority or currency.
+- `primary-source-checked`: only the four reviewed NCC/ITU excerpts in the separate supplement, with publisher URLs, real pages, exact excerpt hashes and review dates.
+
+**All runtime source statuses remain `VERIFY`.** Checking a publisher passage does not establish current law or policy. Base-bank labels cannot self-certify as current or checked. The source PDFs underlying the existing supplied banks are not included in this checkout.
+
+The supplement was reviewed on 2026-09-24 and covers ITU spectrum allocation/allotment/assignment (2015), ITU QoS/QoE nuance (2019), NCC-hosted NCA section 1 (2003), and NCC consumer complaint escalation (undated FAQ). Its metadata gives the precise source URLs and limitations. Excerpt hashes cover excerpt strings, not the full publisher PDFs. The FAQ upload directory is not treated as a publication date. No entire existing bank was marked verified.
+
+Retrieval uses BM25 and controlled terminology; old vectors are ignored. Long questions exclude bounded output instructions from scoring. Explicitly named documents constrain search, and their literal subject headings help retrieve evidence for long scenarios and false premises. Short referential replies can retain real source IDs, while new topic terms must match evidence. Matching checked passages receive a modest preference. Runtime corrects demonstrably inherited section labels using visible headings and marks mixed sections without guessing illegible numbers. No embedding download or paid API call occurs during retrieval or ingestion.
+
+To build a review candidate without overwriting the active or component banks:
 
 ```powershell
-node scripts/generate-embeddings.mjs --input "C:\sources\knowledge-bank.pdf" --version "controlled-v7" --baseline "2026-08-17" --sha256 "<64-character-source-sha256>"
+$knowledgePdf = 'C:\sources\knowledge-bank.pdf'
+$knowledgeHash = (Get-FileHash -LiteralPath $knowledgePdf -Algorithm SHA256).Hash.ToLowerInvariant()
+npm run knowledge:build -- --input $knowledgePdf --version 'actual-source-version' --sha256 $knowledgeHash --output 'data/candidate-bank.json'
 ```
 
-Use the source's actual version and baseline, not the example values. Omit `--baseline` if the source does not establish one. `--title` and `--output` are optional. The historical script name is retained, but no embedding model is downloaded or invoked. A direct `pdfjs-dist` dependency extracts text. Scanned pages need OCR before ingestion, and diagrams/tables still require visual source review.
+Use the actual source version. Add `--baseline YYYY-MM-DD` only when the source establishes that date. `--title` is optional. The default output, if `--output` is omitted, is `data/knowledge-bank.json`. A supplied `--status` remains an artifact label; runtime still requires verification. Scans need OCR, and tables/figures require review against original pages.
 
-The default output is `data/knowledge-bank.json`. It includes the source checksum, file name, supplied version, optional baseline, parser page numbers, section headings, chunk-content checksum, generation time, and generator version. New chunks never cross PDF pages or detected section boundaries. Status defaults to `VERIFY`; only use `--status` after review establishes that status for the entire source. Status of individual factual claims must still be taken from their text.
+Checksum-invalid or malformed banks fail with a typed knowledge-bank error, including invalid present supplements. Restart/redeploy after replacing the corpus because successful indexes are cached. Keep prior artifacts for rollback.
 
-The application prefers the new file when present and otherwise loads the legacy corpus. An invalid new file causes a knowledge-bank error rather than silently serving the old material. Restart the application after replacing a corpus, since successful indexes are cached per server process.
+Run focused checks with:
 
-Run `npm test` after rebuilding. Retrieval tests cover representative bank questions, category-aware drills, short answers, pinned evidence, abstention, honest legacy metadata, and invalid corpus failures. Passing retrieval tests demonstrates source selection for those cases; it does not certify the factual accuracy of the entire bank or generated answers. Review currency corrections and conflicts before publishing any new baseline.
+```powershell
+node --import tsx --test tests/retrieval.test.ts tests/knowledge-ingest.test.ts
+```
+
+Run `npm test` for the complete suite and `node --import tsx scripts/evaluate-conversation.ts --dry-run` to check the conversation evaluation plan without model calls. Test success establishes only the specific checked behavior; it does not certify every fact, current status or generated answer.

@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     for (let attempt = 0; attempt < 2; attempt++) {
       let output: unknown;
       try {
-        output = await callKimiJson(messages, { signal, maxTokens: 4096 });
+        output = await callKimiJson(messages, { signal, reasoningEffort: 'high', maxTokens: 24576 });
       } catch (error) {
         if (!(error instanceof ModelOutputError)) throw error;
       }

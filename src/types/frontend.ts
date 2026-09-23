@@ -15,6 +15,13 @@ export interface SourceReference {
   page?: number;
   status: string;
   excerpt: string;
+  url?: string;
+  publisher?: string;
+  publishedDate?: string;
+  verifiedAt?: string;
+  provenance?: 'primary-source-checked' | 'provided-document' | 'unverified';
+  currencyNote?: string;
+  excerptHash?: string;
 }
 
 export interface ChatMessage {
