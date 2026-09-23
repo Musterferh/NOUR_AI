@@ -45,7 +45,7 @@ export default function ChatInterface({ session, toggleSidebar, onComplete }: { 
   return <section className="workspace chat-workspace" aria-label="Study conversation">
     <header className="workspace-header">
       <div className="header-heading"><button className="icon-button mobile-menu" onClick={toggleSidebar} aria-label="Open navigation"><Menu size={20} /></button><div><p className="eyebrow">YOUR STUDY COACH</p><h1>{session.category}</h1></div></div>
-      <span className="mode-badge">{session.mode === 'Mode 2 (Drill/Quiz)' ? 'Drill & quiz' : 'Teach'}</span>
+      <span className="mode-badge">{session.mode.includes('SIMULATE') ? 'Simulate' : session.mode.includes('DRILL') ? 'Drill & quiz' : 'Teach'}</span>
     </header>
     <div ref={feed} className="message-feed" onScroll={() => { const element = feed.current; if (element) follow.current = element.scrollHeight - element.scrollTop - element.clientHeight < 100; }} aria-busy={chat.loading}>
       {chat.hasOlder && <div className="load-older"><button className="text-button" disabled={chat.loadingOlder} onClick={() => { follow.current = false; void chat.loadOlder(); }}>{chat.loadingOlder ? 'Loading…' : 'Load earlier messages'}</button></div>}

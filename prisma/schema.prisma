@@ -13,7 +13,7 @@ model Session {
   ownerId   String    @default("private")
   title     String
   category  String
-  mode      String    @default("Mode 1 (Teach)")
+  mode      String    @default("MODE 1 — TEACH")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]

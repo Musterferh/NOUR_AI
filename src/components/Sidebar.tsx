@@ -37,7 +37,7 @@ export default function Sidebar(props: Props) {
   return <>
     {props.open && <button className="nav-backdrop" onClick={close} aria-label="Close navigation" tabIndex={-1} />}
     <aside ref={container} className={`sidebar ${props.open ? 'is-open' : ''}`} aria-label="Study navigation">
-      <div className="sidebar-brand"><div className="sidebar-brand-lockup"><Logo width={80} /><p>YOUR NEXT LEVEL</p></div><button className="icon-button mobile-menu" onClick={close} aria-label="Close navigation"><X size={19} /></button></div>
+      <div className="sidebar-brand"><div className="sidebar-brand-lockup"><div className="logo-glow-wrapper"><div className="logo-glow-ring"></div><Logo width={80} /></div><p>YOUR NEXT LEVEL</p></div><button className="icon-button mobile-menu" onClick={close} aria-label="Close navigation"><X size={19} /></button></div>
       <div className="sidebar-scroll">
         <button className="primary-button new-session" onClick={() => { props.createSession(); close(); }} disabled={props.busy}><MessageSquarePlus size={17} /> New conversation</button>
         <nav className="view-nav" aria-label="Study tools">

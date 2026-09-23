@@ -38,7 +38,7 @@ async function requestModel(messages: Message[], stream: boolean, options: KimiO
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       signal,
-      body: JSON.stringify({ model: process.env.KIMI_MODEL || 'moonshot-v1-128k', messages, stream, temperature: stream ? 0.3 : 0.2, max_tokens: Math.min(options.maxTokens || (stream ? 2200 : 12000), 14000) }),
+      body: JSON.stringify({ model: process.env.KIMI_MODEL || 'kimi-k3', messages, stream, temperature: 1, max_tokens: Math.min(options.maxTokens || 4096, 4096) }),
     });
   } catch (error) {
     if (options.signal?.aborted) throw new HttpError(499, 'The request was stopped.');
@@ -46,8 +46,9 @@ async function requestModel(messages: Message[], stream: boolean, options: KimiO
     throw error;
   }
   if (!response.ok) {
-    await response.body?.cancel();
-    throw new HttpError(response.status === 429 ? 429 : 502, response.status === 429 ? 'The coaching engine is busy. Please wait and retry.' : 'The coaching engine could not respond. Check its configuration or retry.');
+    const text = await response.text().catch(() => '');
+    console.error('API Error:', response.status, text);
+    throw new HttpError(response.status === 429 ? 429 : 502, response.status === 429 ? 'The coaching engine is busy. Please wait and retry.' : 'The coaching engine could not respond. Check its configuration or retry. Error: ' + text);
   }
   return response;
 }

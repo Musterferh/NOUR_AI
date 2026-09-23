@@ -149,7 +149,7 @@ export default function Home() {
   if (!auth?.authenticated) return <main className="login-shell">
     <div className="login-frame">
       <aside className="login-identity" aria-label="About NOUR">
-        <div className="login-brand"><Logo width={104} /><span className="login-edition">THE PRIVATE<br />STUDY ROOM</span></div>
+        <div className="login-brand"><div className="logo-glow-wrapper"><div className="logo-glow-ring"></div><Logo width={104} /></div><span className="login-edition">THE PRIVATE<br />STUDY ROOM</span></div>
         <div className="login-statement"><p className="eyebrow">A LITTLE EVERY DAY</p><p className="login-motto">Preparation,<br /><em>with purpose.</em></p><p className="login-introduction">A place to think clearly, deepen your knowledge, and prepare for what comes next.</p></div>
         <ol className="login-principles" aria-label="Your study routine"><li><span>01</span>Study</li><li><span>02</span>Practise</li><li><span>03</span>Reflect</li></ol>
       </aside>

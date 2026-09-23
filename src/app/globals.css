@@ -371,3 +371,26 @@ select { width:100%; border:1px solid var(--control-line); padding:11px 12px; bo
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
 }
+
+/* Logo Glow - Arabic 'Nour' translation light effect */
+.logo-glow-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.logo-glow-ring {
+  position: absolute;
+  inset: -6px; 
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: 0 0 15px var(--accent), inset 0 0 10px var(--accent);
+  animation: logo-glow-blink 2.5s infinite alternate ease-in-out;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes logo-glow-blink {
+  0% { opacity: 0.15; transform: scale(0.95); box-shadow: 0 0 5px var(--accent); }
+  100% { opacity: 0.8; transform: scale(1.05); box-shadow: 0 0 20px var(--accent), inset 0 0 15px var(--accent); }
+}

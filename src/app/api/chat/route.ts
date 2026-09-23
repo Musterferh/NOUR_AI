@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     const messages = buildCoachMessages({ category: session.category, mode: session.mode, context: retrieval.context, sources, history, message, learningRecord: { completedExams: attempts.length, weakTopics: progress.weakTopics.slice(0, 8), recentMistakes: progress.mistakes.slice(0, 5), target: 90 } });
     const stop = new AbortController();
     const signal = AbortSignal.any([req.signal, stop.signal, AbortSignal.timeout(150_000)]);
-    const upstream = retrieval.quality === 'matched' ? await callKimiStream(messages, { signal }) : null;
+    const upstream = await callKimiStream(messages, { signal });
     let canceled = false;
     const finishLease = release;
     release = undefined; // Stream owns cleanup after this point.
@@ -84,29 +84,22 @@ export async function POST(req: Request) {
         const fail = (message: string) => { errorSent = true; send({ type: 'error', message }, true); };
         try {
           send({ type: 'sources', sources });
-          if (!upstream) {
-            content = /^(hi|hello|hey|sannu)[!.\s]*$/i.test(message)
-              ? `Sannu! I can help you learn ${session.category}, practise one question at a time, or review your saved exam mistakes. What would you like to work on?`
-              : 'I could not find enough supporting evidence in the NCC study bank for that question. Please name a specific topic or section, or ask about the question we were practising. I will not guess an answer.';
-            send({ choices: [{ delta: { content } }] });
-          } else {
-            for await (const delta of modelDeltas(upstream)) {
-              if (signal.aborted) throw new HttpError(499, 'The response was stopped.');
-              content += delta;
-              if (content.length > 24_000) { stop.abort(); throw new HttpError(502, 'The response was too long. Please ask a narrower question.'); }
-              send({ choices: [{ delta: { content: delta } }] });
-              if (Date.now() - lastSaved > 1500) {
-                await prisma.message.updateMany({ where: { id: stored.id }, data: { content } });
-                lastSaved = Date.now();
-              }
+          for await (const delta of modelDeltas(upstream)) {
+            if (signal.aborted) throw new HttpError(499, 'The response was stopped.');
+            content += delta;
+            if (content.length > 24_000) { stop.abort(); throw new HttpError(502, 'The response was too long. Please ask a narrower question.'); }
+            send({ choices: [{ delta: { content: delta } }] });
+            if (Date.now() - lastSaved > 1500) {
+              await prisma.message.updateMany({ where: { id: stored.id }, data: { content } });
+              lastSaved = Date.now();
             }
-            if (!content.trim()) throw new HttpError(502, 'The coach returned an empty response. Please retry.');
-            const citations = [...content.matchAll(/\[source:([a-zA-Z0-9_-]+)\]/g)].map(match => match[1]);
-            if (!citations.length || citations.some(id => !sources.some(source => source.id === id))) {
-              const note = '\n\n**Source check:** This response did not provide a complete set of valid source references. Review the attached excerpts before relying on its factual claims.';
-              content += note;
-              send({ choices: [{ delta: { content: note } }] });
-            }
+          }
+          if (!content.trim()) throw new HttpError(502, 'The coach returned an empty response. Please retry.');
+          const citations = [...content.matchAll(/\[source:([a-zA-Z0-9_-]+)\]/g)].map(match => match[1]);
+          if (citations.length > 0 && citations.some(id => !sources.some(source => source.id === id))) {
+            const note = '\n\n**Source check:** This response cited a source reference that was not provided in the current context. Review the attached excerpts before relying on its factual claims.';
+            content += note;
+            send({ choices: [{ delta: { content: note } }] });
           }
         } catch (error) {
           status = signal.aborted || canceled ? 'stopped' : 'failed';

@@ -4,7 +4,7 @@ import { positiveInteger } from './config';
 import { HttpError } from './http';
 
 type QuotaKind = 'chat' | 'exam' | 'speech' | 'transcribe' | 'write' | 'login';
-const HOURLY: Record<QuotaKind, number> = { chat: 90, exam: 6, speech: 90, transcribe: 90, write: 600, login: 20 };
+const HOURLY: Record<QuotaKind, number> = { chat: 90, exam: 20, speech: 90, transcribe: 90, write: 600, login: 20 };
 
 export async function enforceQuota(ownerId: string, kind: QuotaKind): Promise<void> {
   const now = Date.now();
