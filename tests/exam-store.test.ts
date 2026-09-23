@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import type { ExamQuestion, StoredExamAttempt } from '../src/lib/exams';
+import { EXAM_QUESTION_COUNT, type ExamQuestion, type StoredExamAttempt } from '../src/lib/exams';
 
 test('persisted exam lifecycle enforces ownership, revisions, deadlines and one-time grading', async t => {
   const databasePath = path.join(os.tmpdir(), `nour-exam-test-${randomUUID()}.db`);
@@ -25,7 +25,7 @@ test('persisted exam lifecycle enforces ownership, revisions, deadlines and one-
   )`);
 
   async function createAttempt(overrides: Partial<StoredExamAttempt> = {}) {
-    const questions: ExamQuestion[] = Array.from({ length: 20 }, (_, index) => ({
+    const questions: ExamQuestion[] = Array.from({ length: EXAM_QUESTION_COUNT }, (_, index) => ({
       id: randomUUID(), question: `What is the rule for scenario ${index + 1}?`, topic: 'Licensing',
       options: { A: 'A statute', B: 'A consultation', C: 'An initiative', D: 'An announcement' },
       correctAnswer: 'A', explanation: '[CURRENT] The statute defines this obligation.', sourceIds: ['source-1'],
@@ -66,7 +66,7 @@ test('persisted exam lifecycle enforces ownership, revisions, deadlines and one-
     } });
     const lateAnswers = Object.fromEntries(questions.map(question => [question.id, 'A' as const]));
     const submitted = await submitAttempt('private', attempt.id, lateAnswers);
-    assert.equal(submitted.score, 5);
+    assert.equal(submitted.score, Math.round(100 / EXAM_QUESTION_COUNT));
     assert.equal(Object.keys(JSON.parse(submitted.answers)).length, 1);
     assert.ok(submitted.submittedAt);
   });

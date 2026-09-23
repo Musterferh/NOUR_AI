@@ -15,7 +15,9 @@ export async function* modelDeltas(stream: ReadableStream<Uint8Array>): AsyncGen
     try { parsed = JSON.parse(data); } catch { throw new HttpError(502, 'The coaching stream was interrupted. Please retry.'); }
     if (parsed.error) throw new HttpError(502, 'The coaching engine could not finish its response.');
     const choice = parsed.choices?.[0];
-    if (choice?.finish_reason) { ended = true; truncated = choice.finish_reason === 'length'; }
+    // A finish_reason describes the answer; only [DONE] confirms that the
+    // provider finished transmitting the stream (including trailing usage).
+    if (choice?.finish_reason === 'length') truncated = true;
     return typeof choice?.delta?.content === 'string' ? choice.delta.content : '';
   };
   try {
@@ -28,7 +30,9 @@ export async function* modelDeltas(stream: ReadableStream<Uint8Array>): AsyncGen
         const value = process(buffer.slice(0, split));
         buffer = buffer.slice(split + 2);
         if (value) yield value;
+        if (ended) break;
       }
+      if (ended) { buffer = ''; break; }
       if (buffer.length > 128_000) throw new HttpError(502, 'The coaching stream exceeded its limits.');
       if (done) break;
     }

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "manifest": {
+    "generatorVersion": "nour-reviewed-primary-v1",
+    "reviewedAt": "2026-09-24",
+    "chunkCount": 4,
+    "contentSha256": "d864340af2a76b2dd6cfa39e3cda2b8463fa56c2185beb6d858726a0363f4a80",
+    "reviewScope": "Publisher URLs, cited PDF pages, short whitespace-normalized excerpts and authored summaries checked. No certification of current regulatory effect or of the other knowledge banks. Excerpt hashes cover UTF-8 excerpt strings, not publisher PDF bytes."
+  },
+  "chunks": [
+    {
+      "id": "primary-itu-spectrum-2015",
+      "metadata": {
+        "id": "primary-itu-spectrum-2015",
+        "chapter": "2.2.2 Frequency management",
+        "topic": "Spectrum allocation allotment assignment",
+        "statusTag": "VERIFY",
+        "title": "ITU guidelines for a National Table of Frequency Allocations (2015)",
+        "section": "2.2.2 Frequency management; printed pages 3-4, PDF pages 9-10",
+        "page": 10,
+        "version": "2015 edition",
+        "sourceUrl": "https://www.itu.int/en/ITU-D/Spectrum-Broadcasting/Documents/Publications/Guidelines-NTFA-E.pdf",
+        "publisher": "International Telecommunication Union (ITU)",
+        "publishedDate": "2015",
+        "verifiedAt": "2026-09-24",
+        "provenance": "primary-source-checked",
+        "currencyNote": "Definitions reviewed in the 2015 guidance. This does not verify current Nigerian band allocations, individual authorisations or the latest Radio Regulations.",
+        "exactExcerpt": "Allocations are granted to radiocommunications services, while assignments are granted to the operator of a radiocommunication station.",
+        "excerptHash": "009c89fbf6112dc776e3985c081b50f4545ea0543c07a0c7f3903305ddf3215e"
+      },
+      "content": "Spectrum allocation, allotment and assignment: authored study summary of ITU section 2.2.2. Allocation places a frequency band in a table for one or more radio services. Allotment places a channel in an agreed plan for particular countries or areas. Assignment gives a radio station permission to use a frequency or channel under stated conditions. A service allocation alone is not a station authorisation; an assignment must fit the band's allocation. These concepts do not identify any current Nigerian licensee or available band.\nChecked excerpt (PDF page 10): Allocations are granted to radiocommunications services, while assignments are granted to the operator of a radiocommunication station."
+    },
+    {
+      "id": "primary-itu-qos-qoe-2019",
+      "metadata": {
+        "id": "primary-itu-qos-qoe-2019",
+        "chapter": "Appendix II",
+        "topic": "QoS QoE quality of service quality of experience",
+        "statusTag": "VERIFY",
+        "title": "ITU-T G.1033 (10/2019), Appendix II.1",
+        "section": "II.1 Relationship between QoS and QoE; printed page 19",
+        "page": 25,
+        "version": "G.1033 (10/2019)",
+        "sourceUrl": "https://www.itu.int/rec/dologin_pub.asp?id=T-REC-G.1033-201910-I%21%21PDF-E&lang=e&type=items",
+        "publisher": "International Telecommunication Union (ITU)",
+        "publishedDate": "2019-10",
+        "verifiedAt": "2026-09-24",
+        "provenance": "primary-source-checked",
+        "currencyNote": "Reviewed explanatory Appendix II of the 2019 recommendation; the appendix is not an integral part of that recommendation. No current Nigerian QoS thresholds were verified.",
+        "exactExcerpt": "The definition of QoS, however, does include the degree of satisfaction of a user with a service.",
+        "excerptHash": "5b6b888ab45dd252370a7f54b6011522f9d278f1bf226e303db388fa8d0089c8"
+      },
+      "content": "QoS (quality of service) and QoE (quality of experience): authored study summary of ITU-T G.1033 Appendix II.1. QoS is often operationalised through network measurements, but its definition also includes user satisfaction and non-technical aspects. The claim that QoS is exclusively technical is therefore too narrow. QoE emphasises the user's subjective assessment, influenced by expectations and context. Strong network performance alone does not establish a satisfactory experience for every user. The appendix discusses a practical measurement distinction, not a universal sharp boundary between the terms.\nChecked excerpt (PDF page 25): The definition of QoS, however, does include the degree of satisfaction of a user with a service."
+    },
+    {
+      "id": "primary-ncc-nca-objectives-2003",
+      "metadata": {
+        "id": "primary-ncc-nca-objectives-2003",
+        "chapter": "Chapter I",
+        "topic": "NCA 2003 objectives consumer rights competition access",
+        "statusTag": "VERIFY",
+        "title": "Nigerian Communications Act 2003, section 1",
+        "section": "Section 1 objectives; printed page A 293",
+        "page": 9,
+        "version": "2003 Act No. 19, dated 8 July 2003, NCC-hosted text",
+        "sourceUrl": "https://www.ncc.gov.ng/media/1362/view",
+        "publisher": "Nigerian Communications Commission (NCC), hosting the enacted text",
+        "publishedDate": "2003",
+        "verifiedAt": "2026-09-24",
+        "provenance": "primary-source-checked",
+        "currencyNote": "Section 1 checked in the NCC-hosted 2003 text. Amendments, subsequent instruments and current legal applicability were not independently consolidated or certified.",
+        "exactExcerpt": "protect the rights and interest of service providers and consumers within Nigeria",
+        "excerptHash": "a697b7c8707d8071f8366ab91ef6ab0adcf3b6560ff2f55f9157648420ecc786"
+      },
+      "content": "NCA 2003 objectives: authored study summary of section 1(a)-(h) of the Nigerian Communications Act. The stated objectives include implementing national communications policy; an independent and impartial regulator; accessible and affordable services; investment and innovation; competition and Nigerian participation; domestic manufacturing and research; protection of consumers and providers; and consideration for disabled and elderly people. These objectives support reasoning about public-interest regulation, rather than treating revenue generation as the sole purpose. This summary describes the cited 2003 text and does not establish the current status of every later instrument.\nChecked excerpt, section 1(g) (PDF page 9): protect the rights and interest of service providers and consumers within Nigeria"
+    },
+    {
+      "id": "primary-ncc-consumer-redress-faq",
+      "metadata": {
+        "id": "primary-ncc-consumer-redress-faq",
+        "chapter": "Consumer data usage FAQ",
+        "topic": "Consumer complaints data usage redress trouble ticket escalation",
+        "statusTag": "VERIFY",
+        "title": "NCC frequently asked questions on data usage, question 31",
+        "section": "Question 31: seeking redress for data usage complaints",
+        "page": 15,
+        "version": "Undated FAQ with COVID-19 context",
+        "sourceUrl": "https://www.ncc.gov.ng/sites/default/files/2024-11/Documents/consumer-affairs/CAB-FAQ_on_Data_Usage.pdf",
+        "publisher": "Nigerian Communications Commission (NCC)",
+        "verifiedAt": "2026-09-24",
+        "provenance": "primary-source-checked",
+        "currencyNote": "The FAQ is undated and refers to the COVID-19 period. The upload path is not a publication date. Current contact numbers, complaint timelines and channel availability were not verified.",
+        "exactExcerpt": "Your first point of call is your service provider.",
+        "excerptHash": "584306245b281825ac91aeea123856c0bd12b3337ed6960b07a7ad589ddcc16f"
+      },
+      "content": "Consumer complaints and redress: authored study summary of NCC data usage FAQ question 31. First raise a data usage complaint with the service provider and obtain a trouble ticket recording the issue and resolution timeline. If the provider's stated timeline passes without resolution, or its response is unsatisfactory, escalate to NCC with the ticket. Keeping the ticket supports traceability. This is a summary of this FAQ's process; it supplies no verified current contact numbers or universal deadline.\nChecked excerpt (PDF page 15): Your first point of call is your service provider."
+    }
+  ]
+}

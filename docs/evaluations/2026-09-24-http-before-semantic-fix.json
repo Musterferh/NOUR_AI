@@ -1,0 +1,152 @@
+{
+  "mode": "live-http",
+  "startedAt": "2026-09-23T15:55:14.876Z",
+  "model": "kimi-k3",
+  "providerRequestsExpected": 2,
+  "turns": [
+    {
+      "prompt": "Compare spectrum allocation and assignment. Explain why an allocation alone does not authorise a radio station to transmit. Keep the answer under 120 words and cite the supplied evidence.",
+      "answer": "**Allocation vs. Assignment**\n\nAllocation is a table-level decision: it enters a frequency band into a frequency table, designating it for one or more radiocommunication *services* (e.g., mobile, fixed) [source:source-0fc2e67c2710786c-p48-125]. Assignment is station-level: it authorises a *specific* operator or licensee to use a defined frequency under stated conditions [source:chunk-73]. The ITU states the distinction directly: \"Allocations are granted to radiocommunications services, while assignments are granted to the operator of a radiocommunication station\" [source:primary-itu-spectrum-2015].\n\n**Why allocation alone is insufficient:** an allocation merely creates the framework — it says what *type* of service a band supports, not *who* may transmit. It gives no company an operating right, and no domestic assignment follows automatically [source:source-0fc2e67c2710786c-p48-125]. Transmitting lawfully requires a specific assignment fitting within the band's allocation, plus any applicable licence [source:chunk-159].\n\n(118 words)",
+      "sources": [
+        {
+          "id": "primary-itu-spectrum-2015",
+          "title": "ITU guidelines for a National Table of Frequency Allocations (2015)",
+          "section": "2.2.2 Frequency management; printed pages 3-4, PDF pages 9-10",
+          "page": 10,
+          "status": "VERIFY",
+          "excerpt": "Allocations are granted to radiocommunications services, while assignments are granted to the operator of a radiocommunication station.",
+          "provenance": "primary-source-checked",
+          "url": "https://www.itu.int/en/ITU-D/Spectrum-Broadcasting/Documents/Publications/Guidelines-NTFA-E.pdf",
+          "publisher": "International Telecommunication Union (ITU)",
+          "publishedDate": "2015",
+          "verifiedAt": "2026-09-24",
+          "currencyNote": "Definitions reviewed in the 2015 guidance. This does not verify current Nigerian band allocations, individual authorisations or the latest Radio Regulations.",
+          "excerptHash": "009c89fbf6112dc776e3985c081b50f4545ea0543c07a0c7f3903305ddf3215e"
+        },
+        {
+          "id": "source-0fc2e67c2710786c-p48-125",
+          "title": "NCC_Study_Guide_Restructured_Master",
+          "section": "6.6 Allocation, allotment, assignment and authorisation",
+          "page": 48,
+          "status": "VERIFY",
+          "excerpt": "6.6 Allocation, allotment, assignment and authorisation\nTerm   Meaning   Example\nAllocation   Entry in a frequency table designating a band for\none or more radiocommunication services.\nA range allocated to mobile and/or\nfixed service.\nAllotment   Designation of a channel or block for use in an\narea or by a country under a plan.\nA planned channel associated with a\ngeographic area.\nAssignment   Authorisation for a station or licensee to use a\nfrequency under stated conditions.\nAn operator receives",
+          "provenance": "provided-document",
+          "currencyNote": "Document extraction records supplied source bytes and version; publisher authority and current applicability were not independently verified."
+        },
+        {
+          "id": "chunk-159",
+          "title": "NCC Promotion Exam - Checkpoint 12 Spectrum Recalibration",
+          "section": "Checkpoint 12",
+          "status": "VERIFY",
+          "excerpt": "NCC Promotion Exam - Checkpoint 12 Spectrum Recalibration   Page 331  3. THE INTERNATIONAL-TO-NATIONAL HIERARCHY  Radio waves cross borders and equipment markets are global. Spectrum management therefore operates through connected international, regional and national layers.  Layer   Role  International Telecommunication Union Radiocommunication Sector  Maintains the Radio Regulations, conducts World Radiocommunication Conferences and supports global allocation and coordination.  Regional coordi",
+          "provenance": "unverified",
+          "currencyNote": "Original source PDF and version are unavailable; claims and regulatory currency require verification."
+        },
+        {
+          "id": "chunk-73",
+          "title": "NCC Promotion Exam - Controlled Teaching Expansion v4.0 - Checkpoint 2",
+          "section": "DEEP CHAPTER 16; DEEP CHAPTER 17",
+          "status": "VERIFY",
+          "excerpt": "on Exam - Controlled Teaching Expansion v4.0 - Checkpoint 2   Page 156  DEEP CHAPTER 16 - ALLOCATION, ALLOTMENT, ASSIGNMENT AND LICENSING  16.1 The hierarchy  Level   Question answered   Example form  International allocation   Which radio services may use a band within the global/regional framework?  Mobile, fixed, broadcasting, satellite or other service allocation.  National allocation   How does Nigeria designate bands in its National Frequency Allocation Table?  National primary/secondary u",
+          "provenance": "unverified",
+          "currencyNote": "Original source PDF and version are unavailable; claims and regulatory currency require verification."
+        },
+        {
+          "id": "source-0fc2e67c2710786c-p32-84",
+          "title": "NCC_Study_Guide_Restructured_Master",
+          "section": "5.4 Radio links, cells and mobility",
+          "page": 32,
+          "status": "VERIFY",
+          "excerpt": "5.4 Radio links, cells and mobility\nA mobile phone communicates with the network without a cable by transmitting and receiving\nradio-frequency energy. The operator may use only spectrum it is authorised to use, under technical\nconditions intended to manage interference and support efficient national use.\nCoverage begins with a link budget\nThe useful signal leaving a transmitter loses strength as it travels. Distance, frequency, antenna\ncharacteristics, terrain, buildings, vegetation and weather ",
+          "provenance": "provided-document",
+          "currencyNote": "Document extraction records supplied source bytes and version; publisher authority and current applicability were not independently verified."
+        },
+        {
+          "id": "chunk-147",
+          "title": "NCC Promotion Exam - Checkpoint 10 Network Foundations",
+          "section": "Checkpoint 10",
+          "status": "VERIFY",
+          "excerpt": " that can share links with packets from many users.  Why packets are powerful  Most users transmit in bursts rather than continuously. Packet switching can use the quiet intervals of one user to carry another user's traffic. Each packet contains control information, including addressing and sequencing information, so networks can forward and reassemble the data.  What sharing introduces  •   Packets may wait in queues when demand exceeds immediate link capacity.  •   Different packets can experi",
+          "provenance": "unverified",
+          "currencyNote": "Original source PDF and version are unavailable; claims and regulatory currency require verification."
+        }
+      ],
+      "latencyMs": 18993
+    },
+    {
+      "prompt": "Why? Please explain briefly, without a quiz.",
+      "answer": "The reason is separation of levels. Spectrum is managed in layers — international, national planning, then individual authorisation — because radio waves cross borders and many services must coexist without interference [source:chunk-159]. An allocation answers only the planning question: *which types of service* may use this band. It is entered in a table for service categories, not people or companies [source:primary-itu-spectrum-2015].\n\nIf allocation alone permitted transmission, anyone whose activity fit the service category could transmit — no control over who, where, at what power, or under what interference conditions. The assignment step exists to impose exactly those conditions on a specific station [source:source-0fc2e67c2710786c-p48-125]. Think of allocation as zoning land for \"residential use\" — it doesn't give you a house.",
+      "sources": [
+        {
+          "id": "primary-itu-spectrum-2015",
+          "title": "ITU guidelines for a National Table of Frequency Allocations (2015)",
+          "section": "2.2.2 Frequency management; printed pages 3-4, PDF pages 9-10",
+          "page": 10,
+          "status": "VERIFY",
+          "excerpt": "Allocations are granted to radiocommunications services, while assignments are granted to the operator of a radiocommunication station.",
+          "provenance": "primary-source-checked",
+          "url": "https://www.itu.int/en/ITU-D/Spectrum-Broadcasting/Documents/Publications/Guidelines-NTFA-E.pdf",
+          "publisher": "International Telecommunication Union (ITU)",
+          "publishedDate": "2015",
+          "verifiedAt": "2026-09-24",
+          "currencyNote": "Definitions reviewed in the 2015 guidance. This does not verify current Nigerian band allocations, individual authorisations or the latest Radio Regulations.",
+          "excerptHash": "009c89fbf6112dc776e3985c081b50f4545ea0543c07a0c7f3903305ddf3215e"
+        },
+        {
+          "id": "source-0fc2e67c2710786c-p48-125",
+          "title": "NCC_Study_Guide_Restructured_Master",
+          "section": "6.6 Allocation, allotment, assignment and authorisation",
+          "page": 48,
+          "status": "VERIFY",
+          "excerpt": "6.6 Allocation, allotment, assignment and authorisation\nTerm   Meaning   Example\nAllocation   Entry in a frequency table designating a band for\none or more radiocommunication services.\nA range allocated to mobile and/or\nfixed service.\nAllotment   Designation of a channel or block for use in an\narea or by a country under a plan.\nA planned channel associated with a\ngeographic area.\nAssignment   Authorisation for a station or licensee to use a\nfrequency under stated conditions.\nAn operator receives",
+          "provenance": "provided-document",
+          "currencyNote": "Document extraction records supplied source bytes and version; publisher authority and current applicability were not independently verified."
+        },
+        {
+          "id": "chunk-159",
+          "title": "NCC Promotion Exam - Checkpoint 12 Spectrum Recalibration",
+          "section": "Checkpoint 12",
+          "status": "VERIFY",
+          "excerpt": "NCC Promotion Exam - Checkpoint 12 Spectrum Recalibration   Page 331  3. THE INTERNATIONAL-TO-NATIONAL HIERARCHY  Radio waves cross borders and equipment markets are global. Spectrum management therefore operates through connected international, regional and national layers.  Layer   Role  International Telecommunication Union Radiocommunication Sector  Maintains the Radio Regulations, conducts World Radiocommunication Conferences and supports global allocation and coordination.  Regional coordi",
+          "provenance": "unverified",
+          "currencyNote": "Original source PDF and version are unavailable; claims and regulatory currency require verification."
+        },
+        {
+          "id": "chunk-73",
+          "title": "NCC Promotion Exam - Controlled Teaching Expansion v4.0 - Checkpoint 2",
+          "section": "DEEP CHAPTER 16; DEEP CHAPTER 17",
+          "status": "VERIFY",
+          "excerpt": "on Exam - Controlled Teaching Expansion v4.0 - Checkpoint 2   Page 156  DEEP CHAPTER 16 - ALLOCATION, ALLOTMENT, ASSIGNMENT AND LICENSING  16.1 The hierarchy  Level   Question answered   Example form  International allocation   Which radio services may use a band within the global/regional framework?  Mobile, fixed, broadcasting, satellite or other service allocation.  National allocation   How does Nigeria designate bands in its National Frequency Allocation Table?  National primary/secondary u",
+          "provenance": "unverified",
+          "currencyNote": "Original source PDF and version are unavailable; claims and regulatory currency require verification."
+        },
+        {
+          "id": "source-0fc2e67c2710786c-p32-84",
+          "title": "NCC_Study_Guide_Restructured_Master",
+          "section": "5.4 Radio links, cells and mobility",
+          "page": 32,
+          "status": "VERIFY",
+          "excerpt": "5.4 Radio links, cells and mobility\nA mobile phone communicates with the network without a cable by transmitting and receiving\nradio-frequency energy. The operator may use only spectrum it is authorised to use, under technical\nconditions intended to manage interference and support efficient national use.\nCoverage begins with a link budget\nThe useful signal leaving a transmitter loses strength as it travels. Distance, frequency, antenna\ncharacteristics, terrain, buildings, vegetation and weather ",
+          "provenance": "provided-document",
+          "currencyNote": "Document extraction records supplied source bytes and version; publisher authority and current applicability were not independently verified."
+        },
+        {
+          "id": "chunk-147",
+          "title": "NCC Promotion Exam - Checkpoint 10 Network Foundations",
+          "section": "Checkpoint 10",
+          "status": "VERIFY",
+          "excerpt": " that can share links with packets from many users.  Why packets are powerful  Most users transmit in bursts rather than continuously. Packet switching can use the quiet intervals of one user to carry another user's traffic. Each packet contains control information, including addressing and sequencing information, so networks can forward and reassemble the data.  What sharing introduces  •   Packets may wait in queues when demand exceeds immediate link capacity.  •   Different packets can experi",
+          "provenance": "unverified",
+          "currencyNote": "Original source PDF and version are unavailable; claims and regulatory currency require verification."
+        }
+      ],
+      "latencyMs": 16508
+    }
+  ],
+  "replayAnswerAndSourcesIdentical": true,
+  "savedHistoryMessages": 4,
+  "savedPublicationProvenance": true,
+  "passed": true,
+  "temporarySessionRemoved": true,
+  "completedAt": "2026-09-23T15:56:04.338Z"
+}

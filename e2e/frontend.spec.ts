@@ -1,8 +1,8 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 
 const sessions = [
-  { id: 'session-a', title: 'Law conversation', category: 'NCA 2003', mode: 'Mode 1 (Teach)' },
-  { id: 'session-b', title: 'Spectrum conversation', category: 'Spectrum', mode: 'Mode 2 (Drill/Quiz)' },
+  { id: 'session-a', title: 'Law conversation', category: 'NCA 2003', mode: 'MODE 1 — TEACH' },
+  { id: 'session-b', title: 'Spectrum conversation', category: 'Spectrum', mode: 'MODE 2 — DRILL' },
 ];
 const answer = (content: string) => `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\ndata: {"type":"done","messageId":"saved-answer"}\n\n`;
 
@@ -72,6 +72,23 @@ test('a session history HTTP failure remains recoverable without crashing', asyn
   await expect(page.getByLabel('Message NOUR')).toBeEnabled();
 });
 
+test('source cards distinguish a checked publication from unverified study notes', async ({ page }) => {
+  await mockStudy(page);
+  await page.route('**/api/messages?*', route => route.fulfill({ json: [{
+    id: 'sourced-answer', role: 'assistant', content: 'Allocation and assignment have different meanings.',
+    sources: [
+      { id: 'primary-test', title: 'Radio Regulations', status: 'VERIFY', excerpt: 'Reviewed definition.', publisher: 'ITU', url: 'https://www.itu.int/', verifiedAt: '2026-09-24', provenance: 'primary-source-checked', currencyNote: 'Publication checked; current applicability requires separate review.' },
+      { id: 'legacy-test', title: 'Study notes', status: 'VERIFY', excerpt: 'A supplied study passage.' },
+    ],
+  }] }));
+  await page.goto('/');
+  await page.getByText('View 2 sources', { exact: true }).click();
+  await expect(page.getByText('Publication checked · 2026-09-24', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ITU', exact: true })).toHaveAttribute('href', 'https://www.itu.int/');
+  await expect(page.getByText('Study material · independent verification needed', { exact: true })).toBeVisible();
+  await expect(page.getByText('Publication checked; current applicability requires separate review.', { exact: true })).toBeVisible();
+});
+
 test('retrying a failed answer reuses its turn ID and does not duplicate messages', async ({ page }) => {
   await mockStudy(page);
   const turns: string[] = [];
@@ -137,7 +154,7 @@ const generatedExam = () => {
   const template = attempt.questions[0];
   return {
     ...attempt,
-    questions: Array.from({ length: 20 }, (_, index) => ({
+    questions: Array.from({ length: 5 }, (_, index) => ({
       id: `generated-q${index + 1}`,
       question: `Generated practice question ${index + 1}?`,
       topic: template.topic,
@@ -183,7 +200,7 @@ test('Start exam explains missing setup and becomes usable after refreshing corr
   expect(generationRequests).toBe(0);
   await page.getByRole('button', { name: 'Start exam', exact: true }).click();
   await expect(page.getByText('Generated practice question 1?', { exact: true })).toBeVisible();
-  await expect(page.getByText('Question 1 of 20', { exact: true })).toBeVisible();
+  await expect(page.getByText('Question 1 of 5', { exact: true })).toBeVisible();
   await expect(page.getByRole('timer')).toHaveText('30:00');
   expect(generationRequests).toBe(1);
 });
@@ -212,7 +229,7 @@ test('Start exam shows generation failures beside the button and retries success
 
   await page.getByRole('button', { name: 'Start exam', exact: true }).click();
   await expect(page.getByText('Generated practice question 1?', { exact: true })).toBeVisible();
-  await expect(page.getByText('Question 1 of 20', { exact: true })).toBeVisible();
+  await expect(page.getByText('Question 1 of 5', { exact: true })).toBeVisible();
   await expect(page.getByRole('timer')).toHaveText('30:00');
   await expect(page.getByRole('alert').filter({ hasText: failureMessage })).toHaveCount(0);
   expect(generationRequests).toBe(2);

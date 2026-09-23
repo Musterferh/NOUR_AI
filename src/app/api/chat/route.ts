@@ -6,13 +6,14 @@ import { callKimiStream, type Message } from '@/lib/kimi';
 import { retrieveContext, retrieveContextForTopics } from '@/lib/pdf-pipeline';
 import { prisma } from '@/lib/prisma';
 import { MAX_HISTORY_MESSAGES, MAX_MESSAGE_LENGTH } from '@/lib/config';
-import { boundHistory, buildCoachMessages, wantsPersonalRevision } from '@/lib/coaching';
+import { boundHistory, buildCoachMessages, citationNotice, wantsPersonalRevision } from '@/lib/coaching';
 import { buildProgress } from '@/lib/exams';
 import { modelDeltas } from '@/lib/model-stream';
+import { selectReasoningEffort } from '@/lib/reasoning';
 import type { SourceReference } from '@/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 180;
+export const maxDuration = 300;
 const inputSchema = z.object({ message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH), sessionId: z.string().min(1).max(100), turnId: z.string().uuid() }).strict();
 const encoder = new TextEncoder();
 function event(data: unknown) { return encoder.encode(`data: ${JSON.stringify(data)}\n\n`); }
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     const { message, sessionId, turnId } = await readJson(req, inputSchema, 40_000);
     const session = await prisma.session.findFirst({ where: { id: sessionId, ownerId } });
     if (!session) throw new HttpError(404, 'Session not found.');
-    release = await acquireLease(`chat:${sessionId}`, 175_000);
+    release = await acquireLease(`chat:${sessionId}`, 305_000);
     const previous = await prisma.message.findMany({ where: { sessionId, turnId } });
     const user = previous.find(item => item.role === 'user');
     const assistant = previous.find(item => item.role === 'assistant');
@@ -69,8 +70,9 @@ export async function POST(req: Request) {
     assistantId = stored.id;
     const messages = buildCoachMessages({ category: session.category, mode: session.mode, context: retrieval.context, sources, history, message, learningRecord: { completedExams: attempts.length, weakTopics: progress.weakTopics.slice(0, 8), recentMistakes: progress.mistakes.slice(0, 5), target: 90 } });
     const stop = new AbortController();
-    const signal = AbortSignal.any([req.signal, stop.signal, AbortSignal.timeout(150_000)]);
-    const upstream = await callKimiStream(messages, { signal });
+    const signal = AbortSignal.any([req.signal, stop.signal, AbortSignal.timeout(290_000)]);
+    const reasoning = selectReasoningEffort(message, history);
+    const upstream = await callKimiStream(messages, { signal, reasoningEffort: reasoning.effort });
     let canceled = false;
     const finishLease = release;
     release = undefined; // Stream owns cleanup after this point.
@@ -95,9 +97,8 @@ export async function POST(req: Request) {
             }
           }
           if (!content.trim()) throw new HttpError(502, 'The coach returned an empty response. Please retry.');
-          const citations = [...content.matchAll(/\[source:([a-zA-Z0-9_-]+)\]/g)].map(match => match[1]);
-          if (citations.length > 0 && citations.some(id => !sources.some(source => source.id === id))) {
-            const note = '\n\n**Source check:** This response cited a source reference that was not provided in the current context. Review the attached excerpts before relying on its factual claims.';
+          const note = citationNotice(content, sources);
+          if (note) {
             content += note;
             send({ choices: [{ delta: { content: note } }] });
           }

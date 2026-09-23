@@ -2,14 +2,16 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import {
-  buildProgress, EXAM_DURATION_MS, gradeExam, isExpired, mergeAnswers, publicAttempt,
+  buildProgress, EXAM_DURATION_MS, EXAM_QUESTION_COUNT, gradeExam, isExpired, mergeAnswers, publicAttempt,
   validateGeneratedExam, type ExamQuestion, type GeneratedQuestion, type StoredExamAttempt,
 } from '../src/lib/exams';
 
+const licensingCount = Math.floor(EXAM_QUESTION_COUNT / 2);
+
 function generatedQuestions(): GeneratedQuestion[] {
-  return Array.from({ length: 20 }, (_, index) => ({
+  return Array.from({ length: EXAM_QUESTION_COUNT }, (_, index) => ({
     question: `Which principle applies in regulatory scenario ${index + 1}?`,
-    topic: index < 10 ? 'Licensing' : 'Spectrum',
+    topic: index < licensingCount ? 'Licensing' : 'Spectrum',
     options: { A: 'The statutory process', B: 'An informal agreement', C: 'A draft consultation', D: 'No process' },
     correctAnswer: 'A',
     explanation: '[CURRENT] The supplied statute requires the statutory process; a consultation is not law.',
@@ -30,10 +32,10 @@ function storedAttempt(overrides: Partial<StoredExamAttempt> = {}): StoredExamAt
   };
 }
 
-test('generated exam must contain exactly 20 complete questions', () => {
-  assert.equal(validateGeneratedExam(generatedQuestions(), new Set(['source-1'])).length, 20);
+test('generated exam must contain the configured number of complete questions', () => {
+  assert.equal(validateGeneratedExam(generatedQuestions(), new Set(['source-1'])).length, EXAM_QUESTION_COUNT);
   assert.throws(() => validateGeneratedExam([null], new Set(['source-1'])));
-  assert.throws(() => validateGeneratedExam(generatedQuestions().slice(0, 19), new Set(['source-1'])));
+  assert.throws(() => validateGeneratedExam(generatedQuestions().slice(0, EXAM_QUESTION_COUNT - 1), new Set(['source-1'])));
   const missingAnswer = generatedQuestions().map(question => ({ ...question, correctAnswer: undefined }));
   assert.throws(() => validateGeneratedExam(missingAnswer, new Set(['source-1'])));
   const missingOptions = generatedQuestions().map(question => ({ ...question, options: undefined }));
@@ -56,7 +58,7 @@ test('exam rejects invented citations, duplicate questions and indistinguishable
 test('active attempt hides its answer key, explanations and owner identity', () => {
   const attempt = storedAttempt();
   const response = publicAttempt(attempt);
-  assert.equal(response.questions.length, 20);
+  assert.equal(response.questions.length, EXAM_QUESTION_COUNT);
   assert.equal(response.sources[0].id, 'source-1');
   for (const question of response.questions) {
     assert.equal('correctAnswer' in question, false);
@@ -74,7 +76,7 @@ test('active attempt hides its answer key, explanations and owner identity', () 
 test('server grading counts wrong and unanswered questions as incorrect', () => {
   const questions = JSON.parse(storedAttempt().questions) as ExamQuestion[];
   assert.equal(gradeExam(questions, {}), 0);
-  assert.equal(gradeExam(questions, { [questions[0].id]: 'A', [questions[1].id]: 'B' }), 5);
+  assert.equal(gradeExam(questions, { [questions[0].id]: 'A', [questions[1].id]: 'B' }), Math.round(100 / EXAM_QUESTION_COUNT));
   assert.equal(gradeExam(questions, Object.fromEntries(questions.map(question => [question.id, 'A']))), 100);
 });
 
@@ -95,18 +97,18 @@ test('deadline uses absolute server time and expires at the exact boundary', () 
 });
 
 test('progress summarizes completed work only and retains source-backed mistakes', () => {
-  const completed = storedAttempt({ submittedAt: new Date('2026-01-01T10:25:00.000Z'), score: 50 });
+  const completed = storedAttempt({ submittedAt: new Date('2026-01-01T10:25:00.000Z'), score: Math.round(licensingCount / EXAM_QUESTION_COUNT * 100) });
   const questions = JSON.parse(completed.questions) as ExamQuestion[];
-  completed.answers = JSON.stringify(Object.fromEntries(questions.slice(0, 10).map(question => [question.id, 'A'])));
+  completed.answers = JSON.stringify(Object.fromEntries(questions.slice(0, licensingCount).map(question => [question.id, 'A'])));
   const active = storedAttempt();
   const progress = buildProgress([active, completed]);
   assert.equal(progress.attempts.length, 2);
   assert.deepEqual(progress.weakTopics, [
-    { topic: 'Spectrum', total: 10, correct: 0, accuracy: 0 },
-    { topic: 'Licensing', total: 10, correct: 10, accuracy: 100 },
+    { topic: 'Spectrum', total: EXAM_QUESTION_COUNT - licensingCount, correct: 0, accuracy: 0 },
+    { topic: 'Licensing', total: licensingCount, correct: licensingCount, accuracy: 100 },
   ]);
   assert.deepEqual(progress.recommendedTopics, ['Spectrum']);
-  assert.equal(progress.mistakes.length, 10);
+  assert.equal(progress.mistakes.length, EXAM_QUESTION_COUNT - licensingCount);
   assert.equal(progress.mistakes[0].answer, null);
   assert.equal(progress.mistakes[0].sources[0].id, 'source-1');
   assert.equal(progress.attempts[0].answered, 0);

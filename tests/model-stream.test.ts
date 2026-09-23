@@ -22,12 +22,33 @@ test('provider SSE preserves fragmented JSON, CRLF and multibyte text', async ()
   assert.equal(await collect(streamText(text)), 'Sannu — ƙwarai!');
 });
 test('provider SSE accepts final event without trailing newline', async () => {
-  assert.equal(await collect(streamText('data: {"choices":[{"delta":{"content":"Ready"},"finish_reason":"stop"}]}', 7)), 'Ready');
+  assert.equal(await collect(streamText('data: {"choices":[{"delta":{"content":"Ready"},"finish_reason":"stop"}]}\n\ndata: [DONE]', 7)), 'Ready');
 });
 test('provider SSE rejects silent truncation and malformed payloads', async () => {
   await assert.rejects(collect(streamText('data: {"choices":[{"delta":{"content":"Partial"}}]}\n\n')), /ended early/);
+  await assert.rejects(collect(streamText('data: {"choices":[{"delta":{"content":"Partial"},"finish_reason":"stop"}]}\n\n')), /ended early/);
   await assert.rejects(collect(streamText('data: not json\n\n')), /interrupted/);
   await assert.rejects(collect(streamText('data: {"choices":[{"finish_reason":"length"}]}\n\ndata: [DONE]\n\n')), /length limit/);
+});
+
+test('provider private reasoning is never emitted as the learner answer', async () => {
+  const events = [
+    { choices: [{ delta: { reasoning_content: 'private analysis' } }] },
+    { choices: [{ delta: { content: 'Evidence-based answer' } }] },
+  ].map(value => `data: ${JSON.stringify(value)}\n\n`).join('') + 'data: [DONE]\n\n';
+  assert.equal(await collect(streamText(events)), 'Evidence-based answer');
+});
+
+test('terminal DONE completes the answer even when the provider keeps its socket open', { timeout: 1000 }, async () => {
+  let canceled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Complete answer"},"finish_reason":"stop"}]}\n\ndata: {"usage":{"completion_tokens":5}}\n\ndata: [DONE]\n\n'));
+    },
+    cancel() { canceled = true; },
+  });
+  assert.equal(await collect(stream), 'Complete answer');
+  assert.equal(canceled, true);
 });
 test('provider errors never leak their body to the caller', async () => {
   await assert.rejects(collect(streamText('data: {"error":{"message":"provider-secret-body"}}\n\n')), error => error instanceof HttpError && !error.message.includes('provider-secret-body'));

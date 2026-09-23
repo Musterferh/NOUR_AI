@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { EXAM_QUESTION_COUNT } from '../src/lib/exams';
 
 test('exam generation rejects setup failures without consuming paid quota and starts configured exams', async t => {
   const workspace = process.cwd();
@@ -39,10 +40,12 @@ test('exam generation rejects setup failures without consuming paid quota and st
   t.mock.method(globalThis, 'fetch', async (_input: RequestInfo | URL, init?: RequestInit) => {
     providerCalls++;
     sentAuthorization = new Headers(init?.headers).get('Authorization');
-    const payload = JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content: string }> };
+    const payload = JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content: string }>; reasoning_effort: string; max_completion_tokens: number };
+    assert.equal(payload.reasoning_effort, 'high');
+    assert.equal(payload.max_completion_tokens, 24576);
     const grounding = JSON.parse(payload.messages.find(message => message.role === 'user')!.content) as { sources: Array<{ id: string }> };
     assert.ok(grounding.sources.length);
-    const questions = Array.from({ length: 20 }, (_, index) => ({
+    const questions = Array.from({ length: EXAM_QUESTION_COUNT }, (_, index) => ({
       question: `Which rule governs practice scenario number ${index + 1}?`, topic: 'NCA 2003',
       options: { A: 'The statutory rule', B: 'An informal suggestion', C: 'A draft consultation', D: 'A historical announcement' },
       correctAnswer: 'A', explanation: '[VERIFY] The supplied knowledge bank identifies the statutory rule.',
@@ -132,8 +135,8 @@ test('exam generation rejects setup failures without consuming paid quota and st
     assert.equal(response.status, 201);
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
     const attempt = await response.json();
-    assert.equal(attempt.questions.length, 20);
-    assert.equal(new Set(attempt.questions.map((question: { id: string }) => question.id)).size, 20);
+    assert.equal(attempt.questions.length, EXAM_QUESTION_COUNT);
+    assert.equal(new Set(attempt.questions.map((question: { id: string }) => question.id)).size, EXAM_QUESTION_COUNT);
     assert.deepEqual(attempt.answers, {});
     assert.equal(attempt.revision, 0);
     assert.equal(attempt.submittedAt, null);
