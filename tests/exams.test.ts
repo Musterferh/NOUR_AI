@@ -26,7 +26,7 @@ function storedAttempt(overrides: Partial<StoredExamAttempt> = {}): StoredExamAt
     sources: JSON.stringify([{ id: 'source-1', title: 'Master bank', section: 'Chapter 1', status: 'CURRENT', excerpt: 'Statutory text.' }]),
     answers: '{}', revision: 0,
     startedAt: new Date('2026-01-01T10:00:00.000Z'),
-    expiresAt: new Date('2026-01-01T10:30:00.000Z'),
+    expiresAt: new Date('2026-01-01T10:05:00.000Z'),
     submittedAt: null, score: null,
     ...overrides,
   };
@@ -66,7 +66,7 @@ test('active attempt hides its answer key, explanations and owner identity', () 
   }
   assert.equal('ownerId' in response, false);
   assert.equal('score' in response, false);
-  assert.equal(response.expiresAt, '2026-01-01T10:30:00.000Z');
+  assert.equal(response.expiresAt, '2026-01-01T10:05:00.000Z');
   const completed = publicAttempt({ ...attempt, submittedAt: new Date(), score: 50 });
   assert.equal(completed.score, 50);
   assert.ok('correctAnswer' in completed.questions[0]);
@@ -91,13 +91,13 @@ test('answer updates preserve previous answers and reject another attempt’s qu
 test('deadline uses absolute server time and expires at the exact boundary', () => {
   const attempt = storedAttempt();
   assert.equal(attempt.expiresAt.getTime() - attempt.startedAt.getTime(), EXAM_DURATION_MS);
-  assert.equal(isExpired(attempt, new Date('2026-01-01T10:29:59.999Z')), false);
-  assert.equal(isExpired(attempt, new Date('2026-01-01T10:30:00.000Z')), true);
+  assert.equal(isExpired(attempt, new Date('2026-01-01T10:04:59.999Z')), false);
+  assert.equal(isExpired(attempt, new Date('2026-01-01T10:05:00.000Z')), true);
   assert.equal(isExpired(attempt, new Date('2026-01-02T10:00:00.000Z')), true);
 });
 
 test('progress summarizes completed work only and retains source-backed mistakes', () => {
-  const completed = storedAttempt({ submittedAt: new Date('2026-01-01T10:25:00.000Z'), score: Math.round(licensingCount / EXAM_QUESTION_COUNT * 100) });
+  const completed = storedAttempt({ submittedAt: new Date('2026-01-01T10:04:00.000Z'), score: Math.round(licensingCount / EXAM_QUESTION_COUNT * 100) });
   const questions = JSON.parse(completed.questions) as ExamQuestion[];
   completed.answers = JSON.stringify(Object.fromEntries(questions.slice(0, licensingCount).map(question => [question.id, 'A'])));
   const active = storedAttempt();

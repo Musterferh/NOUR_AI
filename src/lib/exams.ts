@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CATEGORIES } from './config';
 
 export const EXAM_QUESTION_COUNT = 5;
-export const EXAM_DURATION_MS = 30 * 60 * 1000;
+export const EXAM_DURATION_MS = 5 * 60 * 1000;
 export const answerOptionSchema = z.enum(['A', 'B', 'C', 'D']);
 export type AnswerOption = z.infer<typeof answerOptionSchema>;
 
