@@ -48,6 +48,6 @@ export function apiError(error: unknown): Response {
     return json({ error: 'The knowledge bank is unavailable. Restore it before continuing.' }, 503);
   }
   // Log only error categories, never user transcripts, provider bodies or credentials.
-  console.error('Request failed:', error instanceof Error ? error.name : 'UnknownError');
-  return json({ error: 'This request could not be completed. Please try again.' }, 500);
+  console.error('Request failed:', error);
+  return json({ error: error instanceof Error ? error.message : 'This request could not be completed. Please try again.' }, 500);
 }
