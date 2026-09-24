@@ -7,6 +7,8 @@ import { prisma } from '@/lib/prisma';
 import { getKimiSetupStatus } from '@/lib/kimi';
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const settings = authSettings(req);
