@@ -56,10 +56,10 @@ export function sessionCookie(req: Request, value: string, maxAge: number) {
   return `${AUTH_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`;
 }
 
-export async function createAuthSession(req: Request) {
+export async function createAuthSession(req: Request, ownerId: string = 'private') {
   const { secret } = authSettings(req);
   const expiresAt = new Date(Date.now() + SESSION_MS);
-  const session = await prisma.authSession.create({ data: { id: randomUUID(), ownerId: 'private', expiresAt } });
+  const session = await prisma.authSession.create({ data: { id: randomUUID(), ownerId, expiresAt } });
   await prisma.authSession.deleteMany({ where: { expiresAt: { lt: new Date() } } });
   return sessionCookie(req, signAuthToken({ sub: session.ownerId, jti: session.id, exp: expiresAt.getTime() }, secret), SESSION_MS / 1000);
 }
