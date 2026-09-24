@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { EXAM_QUESTION_COUNT } from '../src/lib/exams';
+import { EXAM_DURATION_MS, EXAM_QUESTION_COUNT } from '../src/lib/exams';
 
 test('exam generation rejects setup failures without consuming paid quota and starts configured exams', async t => {
   const workspace = process.cwd();
@@ -140,7 +140,7 @@ test('exam generation rejects setup failures without consuming paid quota and st
     assert.deepEqual(attempt.answers, {});
     assert.equal(attempt.revision, 0);
     assert.equal(attempt.submittedAt, null);
-    assert.equal(Date.parse(attempt.expiresAt) - Date.parse(attempt.startedAt), 30 * 60 * 1000);
+    assert.equal(Date.parse(attempt.expiresAt) - Date.parse(attempt.startedAt), EXAM_DURATION_MS);
     for (const question of attempt.questions) {
       assert.equal('correctAnswer' in question, false);
       assert.equal('explanation' in question, false);

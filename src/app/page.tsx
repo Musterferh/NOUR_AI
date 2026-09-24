@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Logo from '@/components/Logo';
-import { ArrowRight, BookOpen, LockKeyhole, Menu } from 'lucide-react';
+import { ArrowRight, BookOpen, LockKeyhole, Menu, User } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import ChatInterface from '@/components/ChatInterface';
 import ExamSimulation from '@/components/ExamSimulation';
@@ -21,6 +21,7 @@ export default function Home() {
   const mobile = useMobile();
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [authError, setAuthError] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [authRetry, setAuthRetry] = useState(0);
@@ -158,8 +159,8 @@ export default function Home() {
         <p className="login-description">Enter your private study space to continue with your coach, practice exams, and progress.</p>
         {authError && <p className="notice error" role="alert">{authError}</p>}
         {!auth ? authError ? <button className="primary-button" onClick={() => setAuthRetry(value => value + 1)}>Retry connection</button> : <p role="status">Opening your study space…</p> : <form onSubmit={event => { event.preventDefault(); void login(); }}>
-          {auth.requiresPassword ? <><label htmlFor="access-password">Study space password</label><div className="password-field"><LockKeyhole size={18} /><input id="access-password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} autoFocus /></div></> : <p className="muted small">Local development access is enabled.</p>}
-          <button className="primary-button" disabled={authBusy || (auth.requiresPassword && !password)}>{authBusy ? 'Signing in…' : 'Enter my study space'}<ArrowRight size={17} /></button>
+          {auth.requiresPassword ? <><label htmlFor="access-username">Study space username</label><div className="password-field"><User size={18} /><input id="access-username" type="text" autoComplete="username" required value={username} onChange={event => setUsername(event.target.value)} autoFocus /></div><label htmlFor="access-password">Study space password</label><div className="password-field"><LockKeyhole size={18} /><input id="access-password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} /></div></> : <p className="muted small">Local development access is enabled.</p>}
+          <button className="primary-button" disabled={authBusy || (auth.requiresPassword && (!password || !username))}>{authBusy ? 'Signing in…' : 'Enter my study space'}<ArrowRight size={17} /></button>
         </form>}
         <p className="login-footer"><LockKeyhole size={14} /><span>Your conversations and progress stay in your private study space.</span></p>
       </section>
