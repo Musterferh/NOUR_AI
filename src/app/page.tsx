@@ -23,6 +23,7 @@ export default function Home() {
   const [authError, setAuthError] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [authAction, setAuthAction] = useState<'login' | 'register'>('login');
   const [authBusy, setAuthBusy] = useState(false);
   const [authRetry, setAuthRetry] = useState(0);
   const [sessions, setSessions] = useState<StudySession[]>([]);
@@ -92,7 +93,7 @@ export default function Home() {
   const login = async () => {
     setAuthBusy(true); setAuthError('');
     try {
-      await apiJson('/api/auth', jsonRequest('POST', { password }));
+      await apiJson('/api/auth', jsonRequest('POST', { username, password, action: authAction }));
       setPassword('');
       setAuth(await apiJson<AuthStatus>('/api/auth'));
     } catch (reason) { setAuthError(errorMessage(reason)); }
@@ -159,8 +160,15 @@ export default function Home() {
         <p className="login-description">Enter your private study space to continue with your coach, practice exams, and progress.</p>
         {authError && <p className="notice error" role="alert">{authError}</p>}
         {!auth ? authError ? <button className="primary-button" onClick={() => setAuthRetry(value => value + 1)}>Retry connection</button> : <p role="status">Opening your study space…</p> : <form onSubmit={event => { event.preventDefault(); void login(); }}>
-          {auth.requiresPassword ? <><label htmlFor="access-username">Study space username</label><div className="password-field"><User size={18} /><input id="access-username" type="text" autoComplete="username" required value={username} onChange={event => setUsername(event.target.value)} autoFocus /></div><label htmlFor="access-password">Study space password</label><div className="password-field"><LockKeyhole size={18} /><input id="access-password" type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} /></div></> : <p className="muted small">Local development access is enabled.</p>}
-          <button className="primary-button" disabled={authBusy || (auth.requiresPassword && (!password || !username))}>{authBusy ? 'Signing in…' : 'Enter my study space'}<ArrowRight size={17} /></button>
+          {auth.requiresPassword ? <><label htmlFor="access-username">Username</label><div className="password-field"><User size={18} /><input id="access-username" type="text" autoComplete="username" required value={username} onChange={event => setUsername(event.target.value)} autoFocus /></div><label htmlFor="access-password">Password</label><div className="password-field"><LockKeyhole size={18} /><input id="access-password" type="password" autoComplete={authAction === 'login' ? 'current-password' : 'new-password'} required value={password} onChange={event => setPassword(event.target.value)} /></div></> : <p className="muted small">Local development access is enabled.</p>}
+          <button className="primary-button" disabled={authBusy || (auth.requiresPassword && (!password || !username))}>{authBusy ? 'Please wait…' : authAction === 'login' ? 'Log In' : 'Create Account'}<ArrowRight size={17} /></button>
+          {auth.requiresPassword && (
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <button type="button" className="text-button" onClick={() => setAuthAction(authAction === 'login' ? 'register' : 'login')}>
+                {authAction === 'login' ? 'Need an account? Register' : 'Already have an account? Log in'}
+              </button>
+            </div>
+          )}
         </form>}
         <p className="login-footer"><LockKeyhole size={14} /><span>Your conversations and progress stay in your private study space.</span></p>
       </section>

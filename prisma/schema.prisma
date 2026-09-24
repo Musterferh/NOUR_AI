@@ -68,3 +68,11 @@ model AuthSession {
   expiresAt DateTime
   @@index([expiresAt])
 }
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
