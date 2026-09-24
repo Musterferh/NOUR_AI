@@ -19,6 +19,6 @@ export function verifyAuthToken(token: string, secret: string, now = Date.now())
     const claims: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!claims || typeof claims !== 'object') return null;
     const c = claims as AuthClaims;
-    return c.sub === 'private' && typeof c.jti === 'string' && c.jti.length <= 100 && Number.isSafeInteger(c.exp) && c.exp > now ? c : null;
+    return typeof c.sub === 'string' && typeof c.jti === 'string' && c.jti.length <= 100 && Number.isSafeInteger(c.exp) && c.exp > now ? c : null;
   } catch { return null; }
 }
